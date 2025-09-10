@@ -128,21 +128,20 @@ This example demonstrates the entire MPPS flow.
 
 Below is a concrete, general-purpose implementation example of a Derivative Protocol that is fully compliant with the MPPS. Its robust set of tags ($context, $task, $constraint, etc.) makes it a powerful default choice for a wide variety of technical and analytical tasks.
 
-"""
-# **Structured Prompt Protocol (SPP) Specification**
+### **Structured Prompt Protocol (SPP) Specification**
 **Version: 1.1.0**
 
-## **Preamble: MPPS Compliance**
+#### **Preamble: MPPS Compliance**
 
 This document specifies the **Structured Prompt Protocol (SPP)**, a general-purpose Derivative Protocol for analytical and instructional tasks. It is designed to be fully compliant with the **Meta-Prompting Protocol Specification (MPPS) v1.0.0**.
 
 As a compliant Derivative Protocol, this entire specification serves as a concrete example of what a "Protocol Architect" agent would generate on the fly and include in the `derivative_protocol_specification` field of an MPPS bundle.
 
-## **1. Abstract**
+#### **1. Abstract**
 
 The Structured Prompt Protocol (SPP) provides a formal architecture for encoding user intentions, data, constraints, and processing instructions into a single, structured message bundle. It is designed to overcome the ambiguity of "flat" text prompts by segregating information into tagged logical blocks, each of which can be mapped to a specific processor on the receiving end. This enables highly reliable, controllable, and extensible interactions with language models and other AI systems. SPP treats prompt engineering as a data serialization problem, not just a linguistic one.
 
-## **2. Core Concepts**
+#### **2. Core Concepts**
 
 * **Tag:** A unique identifier for a piece of data within the prompt. Tags are denoted by a string, with a `$` prefix conventionally used for core, reserved tags.  
 * **Protocol:** A schema that defines the set of valid Tags for a given interaction. It specifies each Tag's purpose, data type, and the suggested processor for handling its data.  
@@ -150,7 +149,7 @@ The Structured Prompt Protocol (SPP) provides a formal architecture for encoding
 * **Processor:** A functional module on the receiver side responsible for interpreting and acting upon the data from a specific Tag (e.g., a guardrail enforcer, a code validator, a data formatter). The Protocol only *suggests* a processor; the receiver implements it.  
 * **Bundle:** The complete message transmitted, containing both the Protocol and the Payload, along with versioning information.
 
-## **3. Architecture and Data Flow**
+#### **3. Architecture and Data Flow**
 
 This protocol defines a two-sided interaction model: a Transmitter that composes and sends the Bundle, and a Receiver that parses and processes it.
 
@@ -170,18 +169,18 @@ This protocol defines a two-sided interaction model: a Transmitter that composes
 5. **Generation & Validation:** The AI model generates a response. Post-generation Processors (e.g., for `$validation` tags) check the output for compliance.  
 6. **Final Response:** The validated, compliant response is sent back to the user.
 
-## **4. Guiding Principles for Dynamic Formulation**
+#### **4. Guiding Principles for Dynamic Formulation**
 
 To ensure SPP Bundles are efficient and accurately reflect the user's intent, implementers (both human and AI) must adhere to the following principles when formulating the protocol and encoding the payload. This prevents the common pitfall of including all possible tags from the standard library regardless of their relevance.
 
-### 4.1. The Principle of Minimalism (Contextual Relevance)
+##### 4.1. The Principle of Minimalism (Contextual Relevance)
 Only include tags that are directly pertinent to the given prompt. The protocol for a given prompt should be as lean as possible. If a prompt component (like external context or a validation rule) does not exist, its corresponding tag MUST NOT be included in the bundle.
 
-### 4.2. The Principle of Fidelity (Faithful Representation)
+##### 4.2. The Principle of Fidelity (Faithful Representation)
 The payload should be a direct, structured representation of the source prompt's explicit and clearly implied intent. The encoding step should not invent new constraints, directives, or output formats that were not requested by the user. The goal is to translate the user's request with high fidelity, not to creatively expand upon it.
 
 
-## **5. Bundle Specification**
+#### **5. Bundle Specification**
 
 The SPP Bundle MUST be a JSON object with two root keys.
 
@@ -192,7 +191,7 @@ The SPP Bundle MUST be a JSON object with two root keys.
  }
  ```
 
-### **5.1. The spp_protocol Object**
+##### **5.1. The spp_protocol Object**
 
 This object defines the schema. Its keys are the Tags. The value for each Tag is an object defining its properties:
 
@@ -200,11 +199,11 @@ This object defines the schema. Its keys are the Tags. The value for each Tag is
 * `processor` (String, Required): A hint for the Receiver suggesting which module should handle this data (e.g., core_content, guardrail_pre, assertion_post).  
 * `type` (String, Optional, Default: "string"): The expected data type. Suggested values: string, array, object, boolean, number.  
 
-### **5.2. The spp_payload Object**
+##### **5.2. The spp_payload Object**
 
 This object contains the instance data. Its keys are the Tags defined in the protocol, and its values are the data corresponding to those tags.
 
-## **6. Core Protocol Tags (SPP Standard Library)**
+#### **6. Core Protocol Tags (SPP Standard Library)**
 
 This protocol defines the following set of general-purpose tags.
 
@@ -220,11 +219,11 @@ This protocol defines the following set of general-purpose tags.
 | **`$examples`** | `few_shot_handler` | An array of few-shot examples (e.g., [{"input": "...", "output": "..."}]) to guide the model's response. |
 | **`$reasoning_strategy`** | `reasoning_handler` | An object defining the formal reasoning method to be used for problem-solving. |
 
-## **7. Example Walkthrough**
+#### **7. Example Walkthrough**
 
 **Objective:** Analyze customer feedback to produce a structured JSON object, with strict formatting and content rules.
 
-### **7.1. SPP Bundle Example**
+##### **7.1. SPP Bundle Example**
 
 ```json
 {  
@@ -290,7 +289,7 @@ This protocol defines the following set of general-purpose tags.
 }
 ```
 
-### **7.2. Expected Final Response (Post-Processing)**
+##### **7.2. Expected Final Response (Post-Processing)**
 ```json
 {  
   "summary": "User reports severe battery drain after the most recent app update.",  
@@ -299,7 +298,7 @@ This protocol defines the following set of general-purpose tags.
 }
 ```
 
-## **8. Processor Semantics**
+#### **8. Processor Semantics**
 This section describes the expected behavior of the standard processors.
 
 * `core_content`: Forwards the primary data/context from the $context tag to the AI model for analysis.
@@ -310,4 +309,3 @@ This section describes the expected behavior of the standard processors.
 * `reasoning_handler`: A pre-generation processor that configures the Executor's problem-solving approach. It interprets the specified strategy (e.g., chain_of_thought, tree_of_thought) and primes the model to follow that structure, often by dynamically generating a meta-prompt that enforces the chosen methodology.
 * `metadata_handler`: Handles ancillary data from the $metadata tag for external purposes like logging, not for generation.
 * `few_shot_handler`: Formats $examples into a structured set of demonstrations to prime the model.
-"""
