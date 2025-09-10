@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPPS: The Meta-Prompting Protocol Specification</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .nav-link.active { color: #4f46e5; border-bottom-color: #4f46e5; }
+        .flow-card { transition: all 0.3s ease; }
+        .flow-card:hover { transform: translateY(-5px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <header class="bg-white/90 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
+            <h1 class="text-xl font-bold text-slate-900">MPPS Project</h1>
+            <div class="hidden md:flex items-baseline space-x-6">
+                <a href="#philosophy" class="nav-link border-b-2 border-transparent pb-1 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Philosophy</a>
+                <a href="#workflow" class="nav-link border-b-2 border-transparent pb-1 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Workflow</a>
+                <a href="#example" class="nav-link border-b-2 border-transparent pb-1 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Example</a>
+                <a href="https://github.com/[YourUsername]/[YourRepo]" target="_blank" class="bg-slate-800 text-white font-semibold px-4 py-2 rounded-md hover:bg-slate-900 transition-colors text-sm">View on GitHub ↗</a>
+            </div>
+        </nav>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <section id="hero" class="text-center py-16 md:py-24">
+            <h1 class="text-4xl md:text-6xl font-extrabold text-slate-900 tracking-tight">
+                <span class="block">Meta-Prompting Protocol</span>
+                <span class="block text-indigo-600 mt-2">The Architecture of AI Communication.</span>
+            </h1>
+            <p class="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-slate-600">
+                MPPS is a framework for generating self-describing, task-specific AI communication protocols on the fly, moving beyond simple prompts to create robust, reliable, and model-agnostic instructions.
+            </p>
+        </section>
+
+        <section id="philosophy" class="py-16 md:py-24 border-t border-slate-200">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Core Philosophy</h2>
+                <p class="mt-4 text-lg text-slate-600">From brittle prompts to resilient protocols.</p>
+            </div>
+            <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+                <div class="bg-white p-6 rounded-lg shadow-md border border-slate-100">
+                    <h3 class="text-xl font-semibold text-indigo-600">Dynamic & Adaptable</h3>
+                    <p class="mt-2 text-slate-600">Generate a new, bespoke protocol for each unique task, ensuring a perfect fit for the problem's complexity.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border border-slate-100">
+                    <h3 class="text-xl font-semibold text-indigo-600">Self-Describing</h3>
+                    <p class="mt-2 text-slate-600">Every message includes its own "rulebook," allowing any AI to understand and execute the task without prior knowledge.</p>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md border border-slate-100">
+                    <h3 class="text-xl font-semibold text-indigo-600">Model Agnostic</h3>
+                    <p class="mt-2 text-slate-600">Because the rules are transmitted with the data, any compliant AI model can act as an Executor, preventing vendor lock-in.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="workflow" class="py-16 md:py-24 border-t border-slate-200">
+             <div class="text-center">
+                <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">The MPPS Workflow</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600">A two-stage process separates the roles of designing the communication and executing the task for maximum reliability.</p>
+            </div>
+            <div class="mt-12 grid grid-cols-1 lg:grid-cols-3 items-center text-center gap-8 lg:gap-0">
+                <div class="flow-card bg-white p-6 rounded-lg shadow-lg border border-slate-200">
+                    <div class="text-3xl">📜</div>
+                    <h3 class="text-2xl font-bold text-slate-800 mt-4">1. The Protocol Architect</h3>
+                    <p class="mt-4 text-slate-600">An AI agent receives a high-level goal. Guided by the MPPS framework, it **generates a new, task-specific Derivative Protocol** and encodes the user's request into a payload.</p>
+                </div>
+                <div class="text-slate-400 text-4xl font-thin my-4 lg:my-0 mx-auto">→</div>
+                 <div class="flow-card bg-white p-6 rounded-lg shadow-lg border border-slate-200">
+                    <div class="text-3xl">📦</div>
+                    <h3 class="text-2xl font-bold text-slate-800 mt-4">2. The Self-Contained Bundle</h3>
+                    <p class="mt-4 text-slate-600">The Architect assembles a bundle containing both the **full protocol specification** (the rules) and the **encoded payload** (the data), then transmits it.</p>
+                </div>
+            </div>
+             <div class="text-slate-400 text-4xl font-thin my-4 lg:my-0 mx-auto text-center hidden lg:block">↓</div>
+              <div class="grid grid-cols-1 lg:grid-cols-3 items-center text-center gap-8 lg:gap-0 mt-0 lg:mt-8">
+                <div class="flow-card bg-white p-6 rounded-lg shadow-lg border border-slate-200 lg:col-start-3">
+                    <div class="text-3xl">🧠</div>
+                    <h3 class="text-2xl font-bold text-slate-800 mt-4">3. The Executor</h3>
+                    <p class="mt-4 text-slate-600">A second AI receives the bundle. It first **reads the specification to learn the rules**, then processes the payload with full context and clarity, returning a highly accurate result.</p>
+                </div>
+                 <div class="text-slate-400 text-4xl font-thin my-4 lg:my-0 mx-auto transform -rotate-90 hidden lg:block">→</div>
+             </div>
+        </section>
+
+        <section id="example" class="py-16 md:py-24 border-t border-slate-200">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">Learn More</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600">Dive into the full specification and see concrete examples of Derivative Protocols like the SPP.</p>
+                <div class="mt-8">
+                     <a href="https://github.com/[YourUsername]/[YourRepo]" target="_blank" class="bg-indigo-600 text-white font-semibold px-8 py-3 rounded-md hover:bg-indigo-700 transition-colors text-lg">Read the Full Specification on GitHub</a>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="bg-slate-800 text-slate-300">
+        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center">
+            <p>The Meta-Prompting Protocol Project. Licensed under MIT.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Simple scroll spy for nav links
+        const sections = document.querySelectorAll('section');
+        const navLinks = document.querySelectorAll('.nav-link');
+        window.addEventListener('scroll', () => {
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 80) { current = section.getAttribute('id'); }
+            });
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').includes(current)) { link.classList.add('active'); }
+            });
+        });
+    </script>
+</body>
+</html>
