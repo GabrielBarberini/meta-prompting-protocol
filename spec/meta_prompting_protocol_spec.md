@@ -38,12 +38,14 @@ An MPPS-compliant bundle MUST be a JSON object containing the following three to
 * meta_protocol_version (String, Required): The version of the MPPS specification being followed (e.g., "1.0.0").  
 * derivative_protocol_specification (Object, Required): The complete, dynamically generated specification for the Derivative Protocol.  
 * derivative_protocol_payload (Object, Required): The user's request, encoded according to the rules of the derivative_protocol_specification.
-
+  
+```json
 {  
   "meta_protocol_version": "1.0.0",  
   "derivative_protocol_specification": { ... },  
   "derivative_protocol_payload": { ... }  
 }
+```
 
 ## **5. Mandatory Components of a Derivative Specification**
 
@@ -74,6 +76,7 @@ This example demonstrates the entire MPPS flow.
 
 ### **Step 3: The Architect assembles the final MPPS Bundle:**
 
+```json
 {  
   "meta_protocol_version": "1.0.0",  
   "derivative_protocol_specification": {  
@@ -119,6 +122,7 @@ This example demonstrates the entire MPPS flow.
     }  
   }  
 }
+```
 
 ## **7. Derivative protocol example: Structured Prompt Protocol (SPP)**
 
