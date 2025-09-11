@@ -73,11 +73,11 @@ This example demonstrates the entire MPPS flow.
 
 **User Goal:** "Write a short horror story about a lighthouse keeper who finds a strange diary. The tone should be Lovecraftian."
 
-### **Step 1: The Protocol Architect generates a bespoke protocol, the "Creative Writing Protocol (CWP)".**
+- **Step 1: The Protocol Architect generates a bespoke protocol, the "Creative Writing Protocol (CWP)";**
 
-### **Step 2: The Architect encodes the user's request into a payload according to the CWP specification**
+- **Step 2: The Architect encodes the user's request into a payload according to the CWP specification;**
 
-### **Step 3: The Architect assembles the final MPPS Bundle containing both the CWP specification and the CWP encoded prompt:**
+- **Step 3: The Architect assembles the final MPPS Bundle containing both the CWP specification and the CWP encoded prompt:**
 
 ```json
 {  
