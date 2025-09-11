@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MPPS: The Meta-Prompting Protocol Specification</title>
+    <title>MPP: The Meta-Prompting Protocol</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -17,7 +17,7 @@
 
     <header class="bg-white/90 backdrop-blur-lg sticky top-0 z-50 shadow-sm">
         <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex justify-between items-center h-16">
-            <h1 class="text-xl font-bold text-slate-900">MPPS Project</h1>
+            <h1 class="text-xl font-bold text-slate-900">Meta-Prompting Protocol</h1>
             <div class="hidden md:flex items-baseline space-x-6">
                 <a href="#philosophy" class="nav-link border-b-2 border-transparent pb-1 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Philosophy</a>
                 <a href="#workflow" class="nav-link border-b-2 border-transparent pb-1 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Workflow</a>
@@ -34,7 +34,7 @@
                 <span class="block text-indigo-600 mt-2">The Architecture of AI Communication.</span>
             </h1>
             <p class="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-slate-600">
-                MPPS is a framework for generating self-describing, task-specific AI communication protocols on the fly, moving beyond simple prompts to create robust, reliable, and model-agnostic instructions.
+                MPP is a framework for generating self-describing, task-specific AI communication protocols on the fly, moving beyond simple prompts to create robust, reliable, and model-agnostic instructions.
             </p>
         </section>
 
@@ -61,31 +61,42 @@
 
         <section id="workflow" class="py-16 md:py-24 border-t border-slate-200">
              <div class="text-center">
-                <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">The MPPS Workflow</h2>
-                <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600">A two-stage process separates the roles of designing the communication and executing the task for maximum reliability.</p>
+                <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">The MPP Workflow</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600">A sequential process separates the roles of designing the communication and executing the task for maximum reliability.</p>
             </div>
-            <div class="mt-12 grid grid-cols-1 lg:grid-cols-3 items-center text-center gap-8 lg:gap-0">
-                <div class="flow-card bg-white p-6 rounded-lg shadow-lg border border-slate-200">
+            <div class="mt-12 flex flex-col items-center space-y-6 text-center">
+                
+                <div class="flow-card bg-white p-6 rounded-lg shadow-lg border border-slate-200 max-w-2xl w-full">
                     <div class="text-3xl">📜</div>
                     <h3 class="text-2xl font-bold text-slate-800 mt-4">1. The Protocol Architect</h3>
-                    <p class="mt-4 text-slate-600">An AI agent receives a high-level goal. Guided by the MPPS framework, it **generates a new, task-specific Derivative Protocol** and encodes the user's request into a payload.</p>
+                    <p class="mt-4 text-slate-600">An AI agent receives a high-level goal. Guided by the MPP framework, it generates a new, task-specific Derivative Protocol and encodes the user's request into a payload.</p>
                 </div>
-                <div class="text-slate-400 text-4xl font-thin my-4 lg:my-0 mx-auto">→</div>
-                 <div class="flow-card bg-white p-6 rounded-lg shadow-lg border border-slate-200">
+                
+                <div class="text-slate-400 text-4xl font-thin">↓</div>
+                
+                <div class="flow-card bg-white p-6 rounded-lg shadow-lg border border-slate-200 max-w-2xl w-full">
                     <div class="text-3xl">📦</div>
                     <h3 class="text-2xl font-bold text-slate-800 mt-4">2. The Self-Contained Bundle</h3>
                     <p class="mt-4 text-slate-600">The Architect assembles a bundle containing both the **full protocol specification** (the rules) and the **encoded payload** (the data), then transmits it.</p>
                 </div>
-            </div>
-             <div class="text-slate-400 text-4xl font-thin my-4 lg:my-0 mx-auto text-center hidden lg:block">↓</div>
-              <div class="grid grid-cols-1 lg:grid-cols-3 items-center text-center gap-8 lg:gap-0 mt-0 lg:mt-8">
-                <div class="flow-card bg-white p-6 rounded-lg shadow-lg border border-slate-200 lg:col-start-3">
+                
+                <div class="text-slate-400 text-4xl font-thin">↓</div>
+                
+                <div class="flow-card bg-white p-6 rounded-lg shadow-lg border border-slate-200 max-w-2xl w-full">
                     <div class="text-3xl">🧠</div>
                     <h3 class="text-2xl font-bold text-slate-800 mt-4">3. The Executor</h3>
                     <p class="mt-4 text-slate-600">A second AI receives the bundle. It first **reads the specification to learn the rules**, then processes the payload with full context and clarity, returning a highly accurate result.</p>
                 </div>
-                 <div class="text-slate-400 text-4xl font-thin my-4 lg:my-0 mx-auto transform -rotate-90 hidden lg:block">→</div>
-             </div>
+                
+                <div class="text-slate-400 text-4xl font-thin">↓</div>
+
+                <div class="flow-card bg-white p-6 rounded-lg shadow-lg border-2 border-dashed border-slate-300 max-w-2xl w-full">
+                    <div class="text-3xl">🧐</div>
+                    <h3 class="text-2xl font-bold text-slate-800 mt-4">4. The Quality Assurance Agent <span class="text-base font-medium text-slate-500">(Optional)</span></h3>
+                    <p class="mt-4 text-slate-600">A third AI agent validates the Executor's output against the original user's intent, using the structured data in the bundle to ensure high fidelity and correctness.</p>
+                </div>
+
+            </div>
         </section>
 
         <section id="example" class="py-16 md:py-24 border-t border-slate-200">
@@ -101,7 +112,7 @@
     
     <footer class="bg-slate-800 text-slate-300">
         <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center">
-            <p>The Meta-Prompting Protocol Project. Licensed under MIT.</p>
+            <p>Meta-Prompting Protocol. Licensed under MIT.</p>
         </div>
     </footer>
 
