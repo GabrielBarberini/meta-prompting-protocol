@@ -1,6 +1,6 @@
 # **Meta-Prompting Protocol Specification (MPPS)**
 
-Version 1.1.1
+Version 1.1.2
 
 ## **1. Abstract**
 
@@ -21,15 +21,17 @@ The fundamental goal of MPPS is to enable a more sophisticated and reliable form
 MPPS defines a two-stage, multi-agent workflow.
 
 1. The Protocol Architect: An initial AI agent that receives a user's high-level goal. Guided by the MPPS rules, its primary responsibilities are:  
-   a. To analyze the goal and determine the optimal communication structure required.  
-   b. To generate a new, bespoke Derivative Protocol Specification that is perfectly suited for the task.  
-   c. To encode the user's goal into a payload according to the new specification.  
-   d. To assemble and transmit the complete MPPS Bundle.  
+   - a. To analyze the goal and determine the optimal communication structure required.  
+   - b. To generate a new, bespoke Derivative Protocol Specification that is perfectly suited for the task.  
+   - c. To encode the user's goal into a payload according to the new specification.  
+   - d. To assemble and transmit the complete MPPS Bundle.  
 2. The Executor: A second AI agent (which can be a different model or the same model in a new session) that receives the MPPS Bundle. Its responsibilities are:  
-   a. To first parse the derivative_protocol_specification to learn the rules, tags, processors, and structure of the incoming message.  
-   b. To then parse the derivative_protocol_payload according to these just-in-time rules.  
-   c. To execute the task with the high degree of clarity and precision provided by the structured information.  
-   d. To return the final response.
+   - a. To first parse the derivative_protocol_specification to learn the rules, tags, processors, and structure of the incoming message.  
+   - b. To then parse the derivative_protocol_payload according to these just-in-time rules.  
+   - c. To execute the task with the high degree of clarity and precision provided by the structured information.  
+   - d. To return the final response.
+
+[Optionally] The Quality Assurance Agent: A third AI agent that can be introduced to validate the Executor's output against the original user's intent, using the structured data provided in the MPPS Bundle.
 
 ## **4. MPPS Bundle Structure**
 
@@ -41,7 +43,7 @@ An MPPS-compliant bundle MUST be a JSON object containing the following three to
   
 ```json
 {  
-  "meta_protocol_version": "1.1.1",  
+  "meta_protocol_version": "1.1.2",  
   "derivative_protocol_specification": { ... },  
   "derivative_protocol_payload": { ... }  
 }
@@ -79,7 +81,7 @@ This example demonstrates the entire MPPS flow.
 
 ```json
 {  
-  "meta_protocol_version": "1.1.1",  
+  "meta_protocol_version": "1.1.2",  
   "derivative_protocol_specification": {  
     "protocol_name": "Creative Writing Protocol (CWP)",  
     "abstract": "A protocol for generating creative text based on structured narrative components.",  
