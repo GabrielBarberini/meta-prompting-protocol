@@ -41,7 +41,7 @@ An MPPS-compliant bundle MUST be a JSON object containing the following three to
   
 ```json
 {  
-  "meta_protocol_version": "1.0.0",  
+  "meta_protocol_version": "1.1.1",  
   "derivative_protocol_specification": { ... },  
   "derivative_protocol_payload": { ... }  
 }
@@ -59,8 +59,6 @@ To be MPPS-compliant, the derivative_protocol_specification object MUST contain 
 * **`processor_semantics`** (Object): A dictionary describing the expected behavior of each processor mentioned in the tag library.  
 * **`guiding_principles`** (Object): Rules for how to correctly apply this protocol, including principles like minimalism and fidelity.
 * **`core_tag_library`**: The dictionary of all valid tags for this protocol, defined according to the `tag_definition_schema`.
- * **`processor_semantics`** (Object): A dictionary describing the expected behavior of each processor mentioned in the tag library.
- * **`guiding_principles`** (Object): Rules for how to correctly apply this protocol, including principles like minimalism and fidelity.
 
 ### 5.1. Advanced Processor Implementation Note: Constrained Decoding
 For Derivative Protocols that specify highly structured output formats (e.g., JSON, XML, or domain-specific languages), a compliant Executor should ideally implement **Grammar-based Constrained Decoding**. This technique ensures that the generated output is not just likely to be correct, but is *guaranteed* to be syntactically valid according to the specified format. The `formatter` processor, in this case, would be responsible for translating the format description (e.g., a JSON schema from an `$output_format` tag) into a formal grammar that directly guides the LLM's token selection during generation. This represents the most robust implementation of format enforcement.
@@ -72,16 +70,17 @@ This example demonstrates the entire MPPS flow.
 
 **User Goal:** "Write a short horror story about a lighthouse keeper who finds a strange diary. The tone should be Lovecraftian."
 
-### **Step 1 & 2: The Protocol Architect generates a bespoke protocol, the "Creative Writing Protocol (CWP) v1.0".**
+### **Step 1: The Protocol Architect generates a bespoke protocol, the "Creative Writing Protocol (CWP)".**
 
-### **Step 3: The Architect assembles the final MPPS Bundle:**
+### **Step 2: The Architect encodes the user's request into a payload according to the CWP specification**
+
+### **Step 3: The Architect assembles the final MPPS Bundle containing both the CWP specification and the CWP encoded prompt:**
 
 ```json
 {  
-  "meta_protocol_version": "1.0.0",  
+  "meta_protocol_version": "1.1.1",  
   "derivative_protocol_specification": {  
     "protocol_name": "Creative Writing Protocol (CWP)",  
-    "protocol_version": "1.0",  
     "abstract": "A protocol for generating creative text based on structured narrative components.",  
     "bundle_structure": {  
       "protocol_key": "cwp_protocol",  
@@ -126,12 +125,11 @@ This example demonstrates the entire MPPS flow.
 
 ## **7. Derivative protocol example: Structured Prompt Protocol (SPP)**
 
-Below is a concrete, general-purpose implementation of a Derivative Protocol that is fully compliant with the MPPS. This is the **machine-readable JSON object** that a Protocol Architect would generate and place in the `derivative_protocol_specification` field of an MPPS bundle.
+Below is a concrete, general-purpose implementation of a Derivative Protocol that is fully compliant with the MPPS. This is the **agent-readable JSON object** that a Protocol Architect would generate and place in the `derivative_protocol_specification` field of an MPPS bundle.
 
 ```json
 {
    "protocol_name": "Structured Prompt Protocol (SPP)",
-   "protocol_version": "1.1.1",
    "abstract": "A general-purpose protocol for analytical and instructional tasks, treating prompt engineering as a data serialization problem.",
    "bundle_structure": {
      "protocol_key": "spp_protocol",
