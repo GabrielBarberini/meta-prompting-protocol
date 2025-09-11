@@ -55,14 +55,15 @@ To be MPPS-compliant, the derivative_protocol_specification object MUST contain 
 * **`abstract`** (String): A brief summary of what this protocol is designed to do.  
 * **`bundle_structure`** (Object): A definition of the keys used for the payload (e.g., { "protocol_key": "cwp_protocol", "payload_key": "cwp_payload" }).  
 * **`tag_definition_schema`** (Object): A description of the required fields for defining each tag (e.g., description, processor, type).  
-* **`core_tag_library`** (Object): The dictionary of all valid tags for this protocol, defined according to the tag_definition_schema.  
+* **`core_tag_library`**: The dictionary of all valid tags for this protocol, defined according to the `tag_definition_schema`.
 * **`processor_semantics`** (Object): A dictionary describing the expected behavior of each processor mentioned in the tag library.  
 * **`guiding_principles`** (Object): Rules for how to correctly apply this protocol, including principles like minimalism and fidelity.
-* **`core_tag_library`**: The dictionary of all valid tags for this protocol, defined according to the `tag_definition_schema`.
 
-### 5.1. Advanced Processor Implementation Note: Constrained Decoding
-For Derivative Protocols that specify highly structured output formats (e.g., JSON, XML, or domain-specific languages), a compliant Executor should ideally implement **Grammar-based Constrained Decoding**. This technique ensures that the generated output is not just likely to be correct, but is *guaranteed* to be syntactically valid according to the specified format. The `formatter` processor, in this case, would be responsible for translating the format description (e.g., a JSON schema from an `$output_format` tag) into a formal grammar that directly guides the LLM's token selection during generation. This represents the most robust implementation of format enforcement.
+### **5.1. Processor Semantics**
+A processor is a named function or instruction that defines the specific behavior the Executor agent must apply to the data contained within a tag. Each key in this section represents a processor, and its value describes the action it performs.
 
+### **5.2. Advanced processor implementation: Constrained Decoding**
+For Derivative Protocols that specify highly structured output formats (e.g. domain-specific languages), a compliant Executor should ideally implement **Grammar-based Constrained Decoding**. This technique ensures that the generated output is not just likely to be correct, but is *guaranteed* to be syntactically valid according to the specified format. The `formatter` processor, in this case, would be responsible for translating the format description (e.g., a JSON schema from an `$output_format` tag) into a formal grammar that directly guides the LLM's token selection during generation. This represents the most robust implementation of format enforcement.
 
 ## **6. Example Walkthrough: A Creative Writing Task**
 
