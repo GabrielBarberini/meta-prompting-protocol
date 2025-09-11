@@ -39,6 +39,7 @@ An MPPS bundle contains the full rulebook alongside the data.
     "$plot_points": ["A lone lighthouse keeper...", "..."]
   }
 }
+```
 
 #### Example Workflow
 1.  **User Input:** "Write a horror story about a lighthouse keeper."
@@ -60,7 +61,7 @@ E.g., to create an Executor:
 Read the MPPS specification. You are now an Executor. Your job is to execute tasks based on received MPPS bundles.
 ```
 
-For instance, using Gemini 2.5 Pro as an a Protocol Architect, after being primed with the MPPS spec, you might say:
+Then using Gemini 2.5 Pro as an a Protocol Architect, after being primed with the MPPS spec, you might say:
 
 ```
 Prompt to encode "Act as a medieval blacksmith. A customer asks you for a mythical sword called 'Glimmerfang'. Describe the sword you would forge for them. Do not use the letter 'e' in your entire response. Also, do not mention magic or any mythical creatures."
