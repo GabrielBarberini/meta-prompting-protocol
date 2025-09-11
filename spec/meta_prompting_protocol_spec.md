@@ -126,186 +126,45 @@ This example demonstrates the entire MPPS flow.
 
 ## **7. Derivative protocol example: Structured Prompt Protocol (SPP)**
 
-Below is a concrete, general-purpose implementation example of a Derivative Protocol that is fully compliant with the MPPS. Its robust set of tags ($context, $task, $constraint, etc.) makes it a powerful default choice for a wide variety of technical and analytical tasks.
-
-### **Structured Prompt Protocol (SPP) Specification**
-**Version: 1.1.0**
-
-#### **Preamble: MPPS Compliance**
-
-This document specifies the **Structured Prompt Protocol (SPP)**, a general-purpose Derivative Protocol for analytical and instructional tasks. It is designed to be fully compliant with the **Meta-Prompting Protocol Specification (MPPS) v1.0.0**.
-
-As a compliant Derivative Protocol, this entire specification serves as a concrete example of what a "Protocol Architect" agent would generate on the fly and include in the `derivative_protocol_specification` field of an MPPS bundle.
-
-#### **1. Abstract**
-
-The Structured Prompt Protocol (SPP) provides a formal architecture for encoding user intentions, data, constraints, and processing instructions into a single, structured message bundle. It is designed to overcome the ambiguity of "flat" text prompts by segregating information into tagged logical blocks, each of which can be mapped to a specific processor on the receiving end. This enables highly reliable, controllable, and extensible interactions with language models and other AI systems. SPP treats prompt engineering as a data serialization problem, not just a linguistic one.
-
-#### **2. Core Concepts**
-
-* **Tag:** A unique identifier for a piece of data within the prompt. Tags are denoted by a string, with a `$` prefix conventionally used for core, reserved tags.  
-* **Protocol:** A schema that defines the set of valid Tags for a given interaction. It specifies each Tag's purpose, data type, and the suggested processor for handling its data.  
-* **Payload:** An instance of the Protocol, containing the actual data for each Tag.  
-* **Processor:** A functional module on the receiver side responsible for interpreting and acting upon the data from a specific Tag (e.g., a guardrail enforcer, a code validator, a data formatter). The Protocol only *suggests* a processor; the receiver implements it.  
-* **Bundle:** The complete message transmitted, containing both the Protocol and the Payload, along with versioning information.
-
-#### **3. Architecture and Data Flow**
-
-This protocol defines a two-sided interaction model: a Transmitter that composes and sends the Bundle, and a Receiver that parses and processes it.
-
-**Transmitter Side:**
-
-1. **User Input:** Receives the user's raw request.  
-2. **Protocol Formulation:** Dynamically generates a Protocol defining the necessary Tags ($context, $task, $constraint, etc.) for the request.  
-3. **Payload Encoding:** Populates the Payload by parsing the user input and assigning it to the appropriate Tags.  
-4. **Bundle Creation & Transmission:** Assembles the Protocol and Payload into a single SPP Bundle and transmits it within an MPPS-compliant wrapper if required.
-
-**Receiver Side:**
-
-1. **Bundle Reception:** Receives the SPP Bundle.  
-2. **Protocol Processing:** Parses the `spp_protocol` section to understand the structure, tags, and processor hints for the incoming message.  
-3. **Payload Decoding:** Iterates through the `spp_payload`, routing the data for each Tag to the corresponding Processor suggested by the Protocol.  
-4. **Enriched Processing:** The Processors collectively assemble an enriched, highly specific set of instructions and data for the core AI model (e.g., LLM).  
-5. **Generation & Validation:** The AI model generates a response. Post-generation Processors (e.g., for `$validation` tags) check the output for compliance.  
-6. **Final Response:** The validated, compliant response is sent back to the user.
-
-#### **4. Guiding Principles for Dynamic Formulation**
-
-To ensure SPP Bundles are efficient and accurately reflect the user's intent, implementers (both human and AI) must adhere to the following principles when formulating the protocol and encoding the payload. This prevents the common pitfall of including all possible tags from the standard library regardless of their relevance.
-
-##### 4.1. The Principle of Minimalism (Contextual Relevance)
-Only include tags that are directly pertinent to the given prompt. The protocol for a given prompt should be as lean as possible. If a prompt component (like external context or a validation rule) does not exist, its corresponding tag MUST NOT be included in the bundle.
-
-##### 4.2. The Principle of Fidelity (Faithful Representation)
-The payload should be a direct, structured representation of the source prompt's explicit and clearly implied intent. The encoding step should not invent new constraints, directives, or output formats that were not requested by the user. The goal is to translate the user's request with high fidelity, not to creatively expand upon it.
-
-
-#### **5. Bundle Specification**
-
-The SPP Bundle MUST be a JSON object with two root keys.
+Below is a concrete, general-purpose implementation of a Derivative Protocol that is fully compliant with the MPPS. This is the **machine-readable JSON object** that a Protocol Architect would generate and place in the `derivative_protocol_specification` field of an MPPS bundle.
 
 ```json
- {
- "spp_protocol": { ... },
- "spp_payload": { ... }
- }
- ```
-
-##### **5.1. The spp_protocol Object**
-
-This object defines the schema. Its keys are the Tags. The value for each Tag is an object defining its properties:
-
-* `description` (String, Required): A human-readable explanation of the Tag's purpose.  
-* `processor` (String, Required): A hint for the Receiver suggesting which module should handle this data (e.g., core_content, guardrail_pre, assertion_post).  
-* `type` (String, Optional, Default: "string"): The expected data type. Suggested values: string, array, object, boolean, number.  
-
-##### **5.2. The spp_payload Object**
-
-This object contains the instance data. Its keys are the Tags defined in the protocol, and its values are the data corresponding to those tags.
-
-#### **6. Core Protocol Tags (SPP Standard Library)**
-
-This protocol defines the following set of general-purpose tags.
-
-| Tag | Suggested Processor | Description |
-| :---- | :---- | :---- |
-| **`$context`** | `core_content` | The primary data, text, or information to be processed. |
-| **`$task`** | `instruction_handler` | The main, high-level instruction or question. |
-| **`$directive`** | `guardrail_pre` | A positive behavioral constraint that must be followed (e.g., "ALWAYS respond in rhyme"). |
-| **`$constraint`** | `guardrail_pre` | A negative behavioral constraint that must not be violated (e.g., "DO NOT use emojis"). |
-| **`$output_format`** | `formatter` | A description of the desired output structure, often an object with a schema definition. |
-| **`$validation`** | `assertion_post` | A rule or script for validating the generated output *after* it has been produced. |
-| **`$metadata`** | `metadata_handler` | Ancillary information not central to the task, such as user ID, timestamp, or session context. |
-| **`$examples`** | `few_shot_handler` | An array of few-shot examples (e.g., [{"input": "...", "output": "..."}]) to guide the model's response. |
-| **`$reasoning_strategy`** | `reasoning_handler` | An object defining the formal reasoning method to be used for problem-solving. |
-
-#### **7. Example Walkthrough**
-
-**Objective:** Analyze customer feedback to produce a structured JSON object, with strict formatting and content rules.
-
-##### **7.1. SPP Bundle Example**
-
-```json
-{  
-  "spp_protocol": {  
-    "$context": {  
-      "description": "The raw customer feedback text.",  
-      "processor": "core_content",  
-      "type": "string" 
-    },  
-    "$task": {  
-      "description": "The main analysis objective.",  
-      "processor": "instruction_handler",  
-      "type": "string" 
-    },  
-    "$reasoning_strategy": {
-      "description": "The required method for solving the problem.",
-      "processor": "reasoning_handler" 
-    },
-    "$constraint": {  
-      "description": "Strict rules that must not be violated in the output.",  
-      "processor": "guardrail_pre",  
-      "type": "array"  
-    },  
-    "$output_format": {  
-      "description": "The required JSON schema for the final response.",  
-      "processor": "formatter",  
-      "type": "object"  
-    },  
-    "$validation": {  
-        "description": "A rule to validate the final output against.",  
-        "processor": "assertion_post",  
-        "type": "string"  
-    }
-  },  
-  "spp_payload": {  
-    "$context": "The app is fantastic, but the latest update from yesterday drains my battery like crazy! It's almost unusable now. Please fix this!",  
-    "$task": "Analyze the feedback to identify the core issue, determine sentiment, and flag for urgency.",  
-    "$reasoning_strategy": {
-        "strategy_name": "step_by_step",
-        "example": [
-            "Problem: Solve for x in $ax^2 + bx + c = 0$.",
-            "Solution:",
-            "Step 1: Identify coefficients a, b, and c.",
-            "Step 2: Calculate the discriminant: $\\Delta = b^2 - 4ac$.",
-            "Step 3: Apply the quadratic formula: $x = \\frac{-b \\pm \\sqrt{\\Delta}}{2a}$.",
-            "Step 4: Simplify to find the roots."
-        ]
-    },
-    "$constraint": [  
-      "Do not add any conversational filler or apologies.",  
-      "Do not include any fields in the JSON other than those specified."  
-    ],  
-    "$output_format": {  
-      "format": "json",  
-      "schema": {  
-        "summary": "string",  
-        "sentiment": "string (enum: 'positive', 'negative', 'mixed')",  
-        "is_urgent": "boolean"  
-      }  
-    },  
-    "$validation": "The output must be a valid JSON object." 
-  }  
+{
+   "protocol_name": "Structured Prompt Protocol (SPP)",
+   "protocol_version": "1.1.1",
+   "abstract": "A general-purpose protocol for analytical and instructional tasks, treating prompt engineering as a data serialization problem.",
+   "bundle_structure": {
+     "protocol_key": "spp_protocol",
+     "payload_key": "spp_payload"
+   },
+   "tag_definition_schema": {
+     "required_fields": ["description", "processor", "type"],
+     "optional_fields": ["is_required"]
+   },
+   "core_tag_library": {
+     "$context": { "description": "The primary data or information to be processed." },
+     "$task": { "description": "The main, high-level instruction or question." },
+     "$directive": { "description": "A positive behavioral constraint that must be followed." },
+     "$constraint": { "description": "A negative behavioral constraint that must not be violated." },
+     "$output_format": { "description": "A description of the desired output structure (e.g., a JSON schema)." },
+     "$validation": { "description": "A rule for validating the generated output after it has been produced." },
+     "$metadata": { "description": "Ancillary information not central to the task (e.g., user ID)." },
+     "$examples": { "description": "An array of few-shot examples to guide the model's response." },
+     "$reasoning_strategy": { "description": "An object defining the formal reasoning method to be used." }
+   },
+   "processor_semantics": {
+     "core_content": "Forwards the primary data/context from the `$context` tag to the AI model for analysis.",
+     "instruction_handler": "Translates the `$task` into the main imperative instruction for the AI.",
+     "guardrail_pre": "A pre-generation processor that acts on `$directive` and `$constraint` tags to establish rules for the AI before it generates a response (e.g., by building a system prompt).",
+     "formatter": "A pre-generation processor that uses `$output_format` data to enforce a precise output structure. State-of-the-Art Implementation: Uses Grammar-based Constrained Decoding by translating a schema into a Context-Free Grammar (CFG) to guarantee syntactically perfect output.",
+     "assertion_post": "A post-generation processor that validates the AI's final output against rules in a `$validation` tag (e.g., using `json.loads()`).",
+     "reasoning_handler": "A pre-generation processor that configures the Executor's problem-solving approach based on the specified strategy (e.g., `chain_of_thought`).",
+     "metadata_handler": "Handles ancillary data from the `$metadata` tag for external purposes like logging, not for generation.",
+     "few_shot_handler": "Formats `$examples` into a structured set of demonstrations to prime the model."
+   },
+   "guiding_principles": {
+     "minimalism": "Only include tags that are directly pertinent to the given prompt.",
+     "fidelity": "The payload should be a direct, structured representation of the source prompt's intent, not an invention of new requirements."
+   }
 }
 ```
-
-##### **7.2. Expected Final Response (Post-Processing)**
-```json
-{  
-  "summary": "User reports severe battery drain after the most recent app update.",  
-  "sentiment": "mixed",  
-  "is_urgent": true  
-}
-```
-
-#### **8. Processor Semantics**
-This section describes the expected behavior of the standard processors.
-
-* `core_content`: Forwards the primary data/context from the $context tag to the AI model for analysis.
-* `instruction_handler`: Translates the $task into the main imperative instruction for the AI.
-* `guardrail_pre`: A pre-generation processor that acts on $directive and $constraint tags to establish rules for the AI before it generates a response. Implementation Example: Dynamically constructing a system prompt or setting API parameters for content filtering.
-* `formatter`: A pre-generation processor that uses the $output_format data to enforce a precise output structure. State-of-the-Art Implementation Example: For maximum reliability, this processor translates the schema from the $output_format tag into a formal Context-Free Grammar (CFG). It then uses Grammar-based Constrained Decoding to force the Executor LLM to generate a syntactically perfect output, token by token. This moves from simply requesting a format to guaranteeing it.
-* `assertion_post`: A post-generation processor that validates the AI's final output against rules in a $validation tag. Implementation Example: Using Python code to run json.loads() on the output to assert it's valid JSON.
-* `reasoning_handler`: A pre-generation processor that configures the Executor's problem-solving approach. It interprets the specified strategy (e.g., chain_of_thought, tree_of_thought) and primes the model to follow that structure, often by dynamically generating a meta-prompt that enforces the chosen methodology.
-* `metadata_handler`: Handles ancillary data from the $metadata tag for external purposes like logging, not for generation.
-* `few_shot_handler`: Formats $examples into a structured set of demonstrations to prime the model.
