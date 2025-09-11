@@ -156,7 +156,7 @@ And it would respond with a complete MPPS bundle ready for an Executor to proces
 }
 ```
 
-Then you could pass that bundle to an Executor primed with the MPPS spec, and it would generate a response like:
+Just transmit the bundle to an Executor primed with the MPPS spec and it would generate a response like:
 
 ```
 You ask for a singular sword? A tool of high worth?
