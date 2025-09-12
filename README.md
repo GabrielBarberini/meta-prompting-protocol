@@ -121,29 +121,6 @@ And it would respond with a complete MPP bundle ready for an Executor to process
     }
   },
   "derivative_protocol_payload": {
-    "cpp_protocol": {
-      "$persona": {
-        "description": "The character or role the AI must adopt for the response.",
-        "processor": "persona_setter",
-        "type": "string"
-      },
-      "$task_description": {
-        "description": "The high-level creative or descriptive task to be performed.",
-        "processor": "instruction_handler",
-        "type": "string"
-      },
-      "$output_constraints": {
-        "description": "An array of strict negative constraints that must not be violated in the output.",
-        "processor": "guardrail_pre",
-        "type": "array"
-      },
-      "$object_focus": {
-        "description": "A specific named object or concept that is central to the task.",
-        "processor": "detail_injector",
-        "type": "string"
-      }
-    },
-    "cpp_payload": {
       "$persona": "Act as a medieval blacksmith.",
       "$task_description": "A customer asks you for a mythical sword. Describe the sword you would forge for them.",
       "$output_constraints": [
@@ -152,7 +129,6 @@ And it would respond with a complete MPP bundle ready for an Executor to process
         "Do not mention any mythical creatures."
       ],
       "$object_focus": "The sword's name is 'Glimmerfang'."
-    }
   }
 }
 ```
