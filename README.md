@@ -1,9 +1,9 @@
-# MPPS: The Meta-Prompting Protocol Specification
+# MPP: Meta-Prompting Protocol
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/MPPS-v1.1.1-blue)](spec/mpps_specification_v1.1.1.md)
+[![Version](https://img.shields.io/badge/MPP-v1.1.1-blue)](spec/meta_prompting_protocol_spec.md)
 
-**MPPS is a framework for generating self-describing, task-specific AI communication protocols on the fly. It transforms prompt engineering into a more robust discipline of prompt architecture.**
+**MPP is a framework for generating self-describing, task-specific AI communication protocols on the fly. It transforms prompt engineering into a more robust discipline of prompt architecture.**
 
 ---
 
@@ -13,7 +13,7 @@ Traditional prompts are monolithic blocks of text. They are often ambiguous, har
 
 ### The Solution: A Self-Describing Protocol
 
-MPPS introduces a two-stage workflow with two key agents:
+MPP introduces a two-stage workflow with two key agents:
 
 1.  **The Protocol Architect:** An AI that analyzes a user's goal and generates a **bespoke Derivative Protocol** (like a custom API) perfectly suited for transmiting the task.
 2.  **The Executor:** An AI that receives a bundle containing both the **newly generated protocol** and a **payload** encoded according to that protocol. It learns the rules just-in-time and executes the task with precision.
@@ -22,7 +22,7 @@ This makes every prompt a self-contained structured package, reducing ambiguity 
 
 ### How It Works: A Quick Look
 
-An MPPS bundle contains the full rulebook alongside the data.
+An MPP bundle contains the full rulebook alongside the data.
 
 ```json
 {
@@ -43,31 +43,31 @@ An MPPS bundle contains the full rulebook alongside the data.
 
 #### Example Workflow
 1.  **User Input:** "Write a horror story about a lighthouse keeper."
-2.  **Protocol Architect (MPPS aware):** Derivates a MPPS compliant protocol on the fly with tags like `$genre` and `$plot_points`. Then encodes the user's request accordingly and bundles it with the generated protocol spec.
-3.  **Executor (MPPS aware):** Receives the bundle, learns the new protocol, and generates a horror story based on the structured payload.
+2.  **Protocol Architect (MPP aware):** Derivates a MPP compliant protocol on the fly with tags like `$genre` and `$plot_points`. Then encodes the user's request accordingly and bundles it with the generated protocol spec.
+3.  **Executor (MPP aware):** Receives the bundle, learns the new protocol, and generates a horror story based on the structured payload.
 
 #### Quick Start
-Download the [MPPS Specification](spec/meta_prompting_protocol_spec.md) and attach it to an AI model session. Frame the AI as a "Protocol Architect" or "Executor" and start generating or executing MPPS bundles.
+Download the [MPP Specification](spec/meta_prompting_protocol_spec.md) and attach it to an AI model session. Frame the AI as a "Protocol Architect" or "Executor" and start generating or executing MPP bundles.
 
 E.g., to create a Protocol Architect:
 
 ```
-Read the MPPS specification. You are now a Protocol Architect. Your job is to create bespoke Derivative Protocols based on user goals.
+Read the MPP specification. You are now a Protocol Architect. Your job is to create bespoke Derivative Protocols based on user goals.
 ```
 
 E.g., to create an Executor:
 
 ```
-Read the MPPS specification. You are now an Executor. Your job is to execute tasks based on received MPPS bundles.
+Read the MPP specification. You are now an Executor. Your job is to execute tasks based on received MPP bundles.
 ```
 
-Then using Gemini 2.5 Pro as an a Protocol Architect, after being primed with the MPPS spec, you might say:
+Then using Gemini 2.5 Pro as an a Protocol Architect, after being primed with the MPP spec, you might say:
 
 ```
 Prompt to encode "Act as a medieval blacksmith. A customer asks you for a mythical sword called 'Glimmerfang'. Describe the sword you would forge for them. Do not use the letter 'e' in your entire response. Also, do not mention magic or any mythical creatures."
 ```
 
-And it would respond with a complete MPPS bundle ready for an Executor to process e.g
+And it would respond with a complete MPP bundle ready for an Executor to process e.g
 ```json
 {
   "meta_protocol_version": "1.1.1",
@@ -156,7 +156,7 @@ And it would respond with a complete MPPS bundle ready for an Executor to proces
 }
 ```
 
-Just transmit the bundle to an Executor primed with the MPPS spec and it would generate a response like:
+Just transmit the bundle to an Executor primed with the MPP spec and it would generate a response like:
 
 ```
 You ask for a singular sword? A tool of high worth?
