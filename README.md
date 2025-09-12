@@ -167,3 +167,8 @@ Its proud styling is 'Glimmerfang'.
 
 This is a mortal's top craft. No wizardry, no odd spirits; just skill. A glint from its sharp facing is a sign of its quality, a bright light in a dim spot. A truly grand sword for a bold man.
 ```
+
+
+### Further reading
+
+- [Meta Prompting for AI Systems](https://arxiv.org/pdf/2311.11482)
