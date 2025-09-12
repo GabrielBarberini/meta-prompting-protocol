@@ -121,14 +121,14 @@ And it would respond with a complete MPP bundle ready for an Executor to process
     }
   },
   "derivative_protocol_payload": {
-      "$persona": "Act as a medieval blacksmith.",
-      "$task_description": "A customer asks you for a mythical sword. Describe the sword you would forge for them.",
-      "$output_constraints": [
-        "Do not use the letter 'e' in your entire response.",
-        "Do not mention magic.",
-        "Do not mention any mythical creatures."
-      ],
-      "$object_focus": "The sword's name is 'Glimmerfang'."
+    "$persona": "Act as a medieval blacksmith.",
+    "$task_description": "A customer asks you for a mythical sword. Describe the sword you would forge for them.",
+    "$output_constraints": [
+       "Do not use the letter 'e' in your entire response.",
+       "Do not mention magic.",
+       "Do not mention any mythical creatures."
+    ],
+    "$object_focus": "The sword's name is 'Glimmerfang'."
   }
 }
 ```
