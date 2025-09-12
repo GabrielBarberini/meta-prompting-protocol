@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/MPP-v1.1.1-blue)](spec/meta_prompting_protocol_spec.md)
 
-**MPP is a framework for generating self-describing, task-specific AI communication protocols on the fly. It transforms prompt engineering into a more robust discipline of prompt architecture.**
+**MPP is a framework for generating self-describing, task-specific AI communication protocols on the fly.**
 
 ---
 
