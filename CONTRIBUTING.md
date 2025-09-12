@@ -1,11 +1,11 @@
-# Contributing to MPPS
+# Contributing to MPP
 
 First off, thank you for considering contributing to the Meta-Prompting Protocol Specification! Your input is valuable in making this framework more robust and versatile.
 
 ## How Can I Contribute?
 
 ### Reporting Bugs or Suggesting Enhancements
-If you find a typo, an ambiguity in the specification, or have an idea for an enhancement, please [open an issue](https://github.com/gabrielbarberini/mpps-protocol/issues). Provide a clear title and a detailed description of the suggestion.
+If you find a typo, an ambiguity in the specification, or have an idea for an enhancement, please [open an issue](https://github.com/gabrielbarberini/meta-prompting-protocol/issues). Provide a clear title and a detailed description of the suggestion.
 
 ### Pull Requests
 We welcome pull requests for improvements to the specification documents or examples.
@@ -18,7 +18,7 @@ We welcome pull requests for improvements to the specification documents or exam
 6.  Open a **Pull Request**.
 
 ## Guiding Principles
-- All contributions should align with the core philosophy of MPPS: creating a model-agnostic, self-describing, and dynamic framework.
+- All contributions should align with the core philosophy of MPP: creating a model-agnostic, self-describing, and dynamic framework.
 - Be respectful and constructive in all discussions.
 
 Thank you for helping to shape the future of AI communication!

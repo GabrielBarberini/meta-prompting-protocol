@@ -1,7 +1,7 @@
 # MPP: Meta-Prompting Protocol
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/MPP-v1.1.1-blue)](spec/meta_prompting_protocol_spec.md)
+[![Version](https://img.shields.io/badge/MPP-v1.1.2-blue)](spec/meta_prompting_protocol_spec.md)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/GabrielBarberini/meta-prompting-protocol)
 
 **MPP is a framework for generating self-describing, task-specific AI communication protocols on the fly.**
@@ -71,7 +71,7 @@ Prompt to encode "Act as a medieval blacksmith. A customer asks you for a mythic
 And it would respond with a complete MPP bundle ready for an Executor to process e.g
 ```json
 {
-  "meta_protocol_version": "1.1.1",
+  "meta_protocol_version": "1.1.2",
   "derivative_protocol_specification": {
     "protocol_name": "Constrained Persona Protocol (CPP)",
     "protocol_version": "1.0",
