@@ -1,6 +1,6 @@
 # **Meta-Prompting Protocol Specification (MPP)**
 
-Version 1.1.2
+Version 1.1.3
 
 ## **1. Abstract**
 
@@ -37,13 +37,13 @@ MPP defines a two-stage, multi-agent workflow.
 
 An MPP-compliant bundle MUST be a JSON object containing the following three top-level keys:
 
-* meta_protocol_version (String, Required): The version of the MPP specification being followed (e.g., "1.0.0").  
-* derivative_protocol_specification (Object, Required): The complete, dynamically generated specification for the Derivative Protocol.  
-* derivative_protocol_payload (Object, Required): The user's request, encoded according to the rules of the derivative_protocol_specification.
+* `meta_protocol_version` (String, Required): The version of the MPP specification being followed (e.g., "1.0.0").  
+* `derivative_protocol_specification` (Object, Required): The complete, dynamically generated specification for the Derivative Protocol.  
+* `derivative_protocol_payload` (Object, Required): The user's request, encoded according to the rules of the derivative_protocol_specification.
   
 ```json
 {  
-  "meta_protocol_version": "1.1.2",  
+  "meta_protocol_version": "1.1.3",  
   "derivative_protocol_specification": { ... },  
   "derivative_protocol_payload": { ... }  
 }
@@ -53,9 +53,8 @@ An MPP-compliant bundle MUST be a JSON object containing the following three top
 
 To be MPP-compliant, the derivative_protocol_specification object MUST contain the following components:
 
-* **`protocol_name`** (String): A unique name for the generated protocol (e.g., "Structured Prompt Protocol", "Creative Writing Protocol").  
+* **`protocol_name`** (String): A unique name for the generated protocol (e.g., "Structured Prompt Protocol", "Creative Writing Protocol"). 
 * **`abstract`** (String): A brief summary of what this protocol is designed to do.  
-* **`bundle_structure`** (Object): A definition of the keys used for the payload (e.g., { "protocol_key": "cwp_protocol", "payload_key": "cwp_payload" }).  
 * **`tag_definition_schema`** (Object): A description of the required fields for defining each tag (e.g., description, processor, type).  
 * **`core_tag_library`**: The dictionary of all valid tags for this protocol, defined according to the `tag_definition_schema`.
 * **`processor_semantics`** (Object): A dictionary describing the expected behavior of each processor mentioned in the tag library.  
@@ -81,17 +80,11 @@ This example demonstrates the entire MPP flow.
 
 ```json
 {  
-  "meta_protocol_version": "1.1.2",  
+  "meta_protocol_version": "1.1.3",  
   "derivative_protocol_specification": {  
     "protocol_name": "Creative Writing Protocol (CWP)",  
-    "abstract": "A protocol for generating creative text based on structured narrative components.",  
-    "bundle_structure": {  
-      "protocol_key": "cwp_protocol",  
-      "payload_key": "cwp_payload"  
-    },  
-    "tag_definition_schema": {  
-      "required_fields": ["description", "processor", "type"]  
-    },  
+    "abstract": "A protocol for generating creative text based on structured narrative components.", 
+    "tag_definition_schema": ["description", "processor", "type"],
     "core_tag_library": {  
       "$genre": { "description": "The literary genre of the story.", "processor": "theme_setter", "type": "string" },  
       "$plot_points": { "description": "An array of key events or elements that must be in the story.", "processor": "narrative_injector", "type": "array" },  
@@ -108,64 +101,84 @@ This example demonstrates the entire MPP flow.
     }  
   },  
   "derivative_protocol_payload": {  
-    "cwp_protocol": {  
-      "$genre": { "description": "The literary genre of the story.", "processor": "theme_setter", "type": "string" },  
-      "$plot_points": { "description": "An array of key events or elements that must be in the story.", "processor": "narrative_injector", "type": "array" },  
-      "$style_constraint": { "description": "A stylistic or tonal constraint for the writing.", "processor": "style_guardrail", "type": "string" }  
-    },  
-    "cwp_payload": {  
-      "$genre": "Horror",  
-      "$plot_points": [  
-        "A lone lighthouse keeper.",  
-        "The discovery of an old, water-logged diary.",  
-        "The diary entries describe things that shouldn't be possible."  
-      ],  
-      "$style_constraint": "The tone must be Lovecraftian, emphasizing cosmic dread and the unknown."  
-    }  
+    "$genre": "Horror",  
+    "$plot_points": [  
+      "A lone lighthouse keeper.",  
+      "The discovery of an old, water-logged diary.",  
+      "The diary entries describe things that shouldn't be possible."  
+    ],  
+    "$style_constraint": "The tone must be Lovecraftian, emphasizing cosmic dread and the unknown."  
   }  
-}
+} 
 ```
 
-## **7. Derivative protocol example: Structured Prompt Protocol (SPP)**
-
-Below is a concrete, general-purpose implementation of a Derivative Protocol that is fully compliant with the MPP. This is the **agent-readable JSON object** that a Protocol Architect would generate and place in the `derivative_protocol_specification` field of an MPP bundle.
+## **6.1 Another derivative protocol example: Structured Prompt Protocol (SPP)**
 
 ```json
 {
-   "protocol_name": "Structured Prompt Protocol (SPP)",
-   "abstract": "A general-purpose protocol for analytical and instructional tasks, treating prompt engineering as a data serialization problem.",
-   "bundle_structure": {
-     "protocol_key": "spp_protocol",
-     "payload_key": "spp_payload"
-   },
-   "tag_definition_schema": {
-     "required_fields": ["description", "processor", "type"],
-     "optional_fields": ["is_required"]
-   },
-   "core_tag_library": {
-     "$context": { "description": "The primary data or information to be processed." },
-     "$task": { "description": "The main, high-level instruction or question." },
-     "$directive": { "description": "A positive behavioral constraint that must be followed." },
-     "$constraint": { "description": "A negative behavioral constraint that must not be violated." },
-     "$output_format": { "description": "A description of the desired output structure (e.g., a JSON schema)." },
-     "$validation": { "description": "A rule for validating the generated output after it has been produced." },
-     "$metadata": { "description": "Ancillary information not central to the task (e.g., user ID)." },
-     "$examples": { "description": "An array of few-shot examples to guide the model's response." },
-     "$reasoning_strategy": { "description": "An object defining the formal reasoning method to be used." }
-   },
-   "processor_semantics": {
-     "core_content": "Forwards the primary data/context from the `$context` tag to the AI model for analysis.",
-     "instruction_handler": "Translates the `$task` into the main imperative instruction for the AI.",
-     "guardrail_pre": "A pre-generation processor that acts on `$directive` and `$constraint` tags to establish rules for the AI before it generates a response (e.g., by building a system prompt).",
-     "formatter": "A pre-generation processor that uses `$output_format` data to enforce a precise output structure. State-of-the-Art Implementation: Uses Grammar-based Constrained Decoding by translating a schema into a Context-Free Grammar (CFG) to guarantee syntactically perfect output.",
-     "assertion_post": "A post-generation processor that validates the AI's final output against rules in a `$validation` tag (e.g., using `json.loads()`).",
-     "reasoning_handler": "A pre-generation processor that configures the Executor's problem-solving approach based on the specified strategy (e.g., `chain_of_thought`).",
-     "metadata_handler": "Handles ancillary data from the `$metadata` tag for external purposes like logging, not for generation.",
-     "few_shot_handler": "Formats `$examples` into a structured set of demonstrations to prime the model."
-   },
-   "guiding_principles": {
-     "minimalism": "Only include tags that are directly pertinent to the given prompt.",
-     "fidelity": "The payload should be a direct, structured representation of the source prompt's intent, not an invention of new requirements."
-   }
+  "protocol_name": "Structured Prompt Protocol (SPP)",
+  "abstract": "A general-purpose protocol for analytical and instructional tasks, treating prompt engineering as a data serialization problem.",
+  "tag_definition_schema": ["description", "processor", "type"],
+  "core_tag_library": {
+    "$context": {
+      "description": "The primary data or information to be processed.",
+      "processor": "core_content",
+      "type": "any"
+    },
+    "$task": {
+      "description": "The main, high-level instruction or question.",
+      "processor": "instruction_handler",
+      "type": "string"
+    },
+    "$directive": {
+      "description": "A positive behavioral constraint that must be followed.",
+      "processor": "guardrail_pre",
+      "type": "string"
+    },
+    "$constraint": {
+      "description": "A negative behavioral constraint that must not be violated.",
+      "processor": "guardrail_pre",
+      "type": "string"
+    },
+    "$output_format": {
+      "description": "A description of the desired output structure (e.g., a JSON schema).",
+      "processor": "formatter",
+      "type": "object"
+    },
+    "$validation": {
+      "description": "A rule for validating the generated output after it has been produced.",
+      "processor": "assertion_post",
+      "type": "object"
+    },
+    "$metadata": {
+      "description": "Ancillary information not central to the task (e.g., user ID).",
+      "processor": "metadata_handler",
+      "type": "object"
+    },
+    "$examples": {
+      "description": "An array of few-shot examples to guide the model's response.",
+      "processor": "few_shot_handler",
+      "type": "array"
+    },
+    "$reasoning_strategy": {
+      "description": "An object defining the formal reasoning method to be used.",
+      "processor": "reasoning_handler",
+      "type": "object"
+    }
+  },
+  "processor_semantics": {
+    "core_content": "Forwards the primary data/context from the `$context` tag to the AI model for analysis.",
+    "instruction_handler": "Translates the `$task` into the main imperative instruction for the AI.",
+    "guardrail_pre": "A pre-generation processor that acts on `$directive` and `$constraint` tags to establish rules for the AI before it generates a response (e.g., by building a system prompt).",
+    "formatter": "A pre-generation processor that uses `$output_format` data to enforce a precise output structure. State-of-the-Art Implementation: Uses Grammar-based Constrained Decoding by translating a schema into a Context-Free Grammar (CFG) to guarantee syntactically perfect output.",
+    "assertion_post": "A post-generation processor that validates the AI's final output against rules in a `$validation` tag (e.g., using `json.loads()`).",
+    "reasoning_handler": "A pre-generation processor that configures the Executor's problem-solving approach based on the specified strategy (e.g., `chain_of_thought`).",
+    "metadata_handler": "Handles ancillary data from the `$metadata` tag for external purposes like logging, not for generation.",
+    "few_shot_handler": "Formats `$examples` into a structured set of demonstrations to prime the model."
+  },
+  "guiding_principles": {
+    "minimalism": "Only include tags that are directly pertinent to the given prompt.",
+    "fidelity": "The payload should be a direct, structured representation of the source prompt's intent, not an invention of new requirements."
+  }
 }
 ```
