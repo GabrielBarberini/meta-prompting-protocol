@@ -65,7 +65,7 @@ Read the MPP specification. You are now an Executor. Your job is to execute task
 Then using Gemini 2.5 Pro as an a Protocol Architect, after being primed with the MPP spec, you might say:
 
 ```
-Prompt to encode "Act as a medieval blacksmith. A customer asks you for a mythical sword called 'Glimmerfang'. Describe the sword you would forge for them. Do not use the letter 'e' in your entire response. Also, do not mention magic or any mythical creatures."
+Derivate an appropriate protocol and build a bundle encoding the following prompt with it "Act as a medieval blacksmith. A customer asks you for a mythical sword called 'Glimmerfang'. Describe the sword you would forge for them. Do not use the letter 'e' in your entire response. Also, do not mention magic or any mythical creatures."
 ```
 
 And it would respond with a complete MPP bundle ready for an Executor to process e.g
