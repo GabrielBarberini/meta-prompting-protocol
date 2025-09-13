@@ -1,7 +1,7 @@
 # MPP: Meta-Prompting Protocol
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/MPP-v1.1.2-blue)](spec/meta_prompting_protocol_spec.md)
+[![Version](https://img.shields.io/badge/MPP-v1.1.3-blue)](spec/meta_prompting_protocol_spec.md)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/GabrielBarberini/meta-prompting-protocol)
 
 **MPP is a framework for generating self-describing, task-specific AI communication protocols on the fly.**
@@ -71,22 +71,12 @@ Prompt to encode "Act as a medieval blacksmith. A customer asks you for a mythic
 And it would respond with a complete MPP bundle ready for an Executor to process e.g
 ```json
 {
-  "meta_protocol_version": "1.1.2",
+  "meta_protocol_version": "1.1.3",
   "derivative_protocol_specification": {
     "protocol_name": "Constrained Persona Protocol (CPP)",
     "protocol_version": "1.0",
     "abstract": "A protocol for generating creative text from a specific persona's point of view, while adhering to a strict set of stylistic and content-based output constraints.",
-    "bundle_structure": {
-      "protocol_key": "cpp_protocol",
-      "payload_key": "cpp_payload"
-    },
-    "tag_definition_schema": {
-      "required_fields": [
-        "description",
-        "processor",
-        "type"
-      ]
-    },
+    "tag_definition_schema": ["description", "processor", "type"],
     "core_tag_library": {
       "$persona": {
         "description": "The character or role the AI must adopt for the response.",
