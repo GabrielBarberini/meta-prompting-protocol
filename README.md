@@ -138,4 +138,4 @@ This is a mortal's top craft. No wizardry, no odd spirits; just skill. A glint f
 
 ### Further reading
 
-- [Meta Prompting for AI Systems](https://arxiv.org/pdf/2311.11482)
+- Zhang, Y., Yuan, Y., & Yao, A. C.-C. (2023). [Meta Prompting for AI Systems](https://arxiv.org/abs/2311.11482). *arXiv preprint arXiv:2311.11482*.
