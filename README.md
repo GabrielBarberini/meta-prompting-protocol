@@ -2,6 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Version](https://img.shields.io/badge/MPP-v1.1.3-blue)](spec/meta_prompting_protocol_spec.md)
+[![Website](https://camo.githubusercontent.com/e49e99e37f7d3db64fc81400ce926d621dd38746c68b678a10c54331835832fe/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f50726f6a6563742d576562736974652d677265656e)](https://gabrielbarberini.github.io/meta-prompting-protocol/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/GabrielBarberini/meta-prompting-protocol)
 
 **MPP is a framework for generating self-describing, task-specific AI communication protocols on the fly.**
