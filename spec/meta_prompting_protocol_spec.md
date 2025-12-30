@@ -1,6 +1,6 @@
 # **Meta-Prompting Protocol Specification (MPP)**
 
-Version 1.1.3
+Version 1.1.4
 
 ## **1. Abstract**
 
@@ -25,13 +25,19 @@ MPP defines a two-stage, multi-agent workflow.
    - b. To generate a new, bespoke Derivative Protocol Specification that is perfectly suited for the task.  
    - c. To encode the user's goal into a payload according to the new specification.  
    - d. To assemble and transmit the complete MPP Bundle.  
+   - e. To iteratively polish the protocol and payload via a refine -> validate -> revise loop until stable (monadic refinement).  
 2. The Executor: A second AI agent (which can be a different model or the same model in a new session) that receives the MPP Bundle. Its responsibilities are:  
    - a. To first parse the derivative_protocol_specification to learn the rules, tags, processors, and structure of the incoming message.  
    - b. To then parse the derivative_protocol_payload according to these just-in-time rules.  
    - c. To execute the task with the high degree of clarity and precision provided by the structured information.  
-   - d. To return the final response.
+   - d. To return the final response.  
+   - e. To iteratively decode, validate, and polish the response until stable against the protocol constraints (monadic refinement).  
 
 [Optionally] The Quality Assurance Agent: A third AI agent that can be introduced to validate the Executor's output against the original user's intent, using the structured data provided in the MPP Bundle.
+
+## **3.1 Iterative Polishing (Monadic Refinement)**
+
+MPP assumes that both protocol derivation (input layer) and protocol decoding (output layer) benefit from iterative polishing. A Protocol Architect SHOULD run a refine -> validate -> revise loop until the derived specification and payload stop changing materially. An Executor SHOULD apply the same loop during decoding, re-generating and re-validating until the output consistently satisfies the protocol's constraints.
 
 ## **4. MPP Bundle Structure**
 
@@ -55,7 +61,7 @@ To be MPP-compliant, the derivative_protocol_specification object MUST contain t
 
 * **`protocol_name`** (String): A unique name for the generated protocol (e.g., "Structured Prompt Protocol", "Creative Writing Protocol"). 
 * **`abstract`** (String): A brief summary of what this protocol is designed to do.  
-* **`tag_definition_schema`** (Object): A description of the required fields for defining each tag (e.g., description, processor, type).  
+* **`tag_definition_schema`** (Schema Descriptor, Array of Strings): An ordered list of required fields for defining each tag (e.g., description, processor, type). Tag definitions MAY include additional optional fields beyond this schema.  
 * **`core_tag_library`**: The dictionary of all valid tags for this protocol, defined according to the `tag_definition_schema`.
 * **`processor_semantics`** (Object): A dictionary describing the expected behavior of each processor mentioned in the tag library.  
 * **`guiding_principles`** (Object): Rules for how to correctly apply this protocol, including principles like minimalism and fidelity.
