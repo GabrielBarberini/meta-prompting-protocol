@@ -1,6 +1,6 @@
 # DSPy Integration Notes
 
-This folder holds documentation only. The Python helpers live in `mpp_dspy/` to avoid shadowing any upstream `dspy` package.
+DSPy usage notes for the `mpp_dspy` package.
 
 ## Usage Example (Short)
 
