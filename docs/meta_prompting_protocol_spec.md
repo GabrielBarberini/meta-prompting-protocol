@@ -1,6 +1,6 @@
 # **Meta-Prompting Protocol Specification (MPP)**
 
-Version 1.1.4
+Version 1.1.5
 
 ## **1. Abstract**
 
@@ -49,11 +49,23 @@ An MPP-compliant bundle MUST be a JSON object containing the following three top
   
 ```json
 {  
-  "meta_protocol_version": "1.1.3",  
+  "meta_protocol_version": "1.1.5",  
   "derivative_protocol_specification": { ... },  
   "derivative_protocol_payload": { ... }  
 }
 ```
+
+## **4.1 Ordering and Attention Guidance**
+
+MPP bundles are typically serialized into a single prompt. To reduce attention
+confusion, definitions SHOULD appear before references. When serializing
+derivative_protocol_specification, use definition-first ordering: protocol_name,
+protocol_version (if any), abstract, guiding_principles, tag_definition_schema,
+processor_semantics, core_tag_library, then any optional ordered metadata
+(e.g., payload_order, processor_pipeline).
+
+JSON objects are unordered. If payload ordering matters, the derivative protocol
+SHOULD declare it explicitly (see 5.3).
 
 ## **5. Mandatory Components of a Derivative Specification**
 
@@ -61,16 +73,39 @@ To be MPP-compliant, the derivative_protocol_specification object MUST contain t
 
 * **`protocol_name`** (String): A unique name for the generated protocol (e.g., "Structured Prompt Protocol", "Creative Writing Protocol"). 
 * **`abstract`** (String): A brief summary of what this protocol is designed to do.  
-* **`tag_definition_schema`** (Schema Descriptor, Array of Strings): An ordered list of required fields for defining each tag (e.g., description, processor, type). Tag definitions MAY include additional optional fields beyond this schema.  
-* **`core_tag_library`**: The dictionary of all valid tags for this protocol, defined according to the `tag_definition_schema`.
-* **`processor_semantics`** (Object): A dictionary describing the expected behavior of each processor mentioned in the tag library.  
 * **`guiding_principles`** (Object): Rules for how to correctly apply this protocol, including principles like minimalism and fidelity.
+* **`tag_definition_schema`** (Schema Descriptor, Array of Strings): An ordered list of required fields for defining each tag (e.g., description, processor, type). Tag definitions MAY include additional optional fields beyond this schema.  
+* **`processor_semantics`** (Object): A dictionary describing the expected behavior of each processor mentioned in the tag library.  
+* **`core_tag_library`**: The dictionary of all valid tags for this protocol, defined according to the `tag_definition_schema`.
+
+No additional top-level keys are allowed beyond the mandatory components and the
+optional ordered metadata defined in 5.3.
 
 ### **5.1. Processor Semantics**
 A processor is a named function or instruction that defines the specific behavior the Executor agent must apply to the data contained within a tag. Each key in this section represents a processor, and its value describes the action it performs.
 
 ### **5.2. Advanced processor implementation: Constrained Decoding**
 For Derivative Protocols that specify highly structured output formats (e.g. domain-specific languages), a compliant Executor should ideally implement **Grammar-based Constrained Decoding**. This technique ensures that the generated output is not just likely to be correct, but is *guaranteed* to be syntactically valid according to the specified format. The `formatter` processor, in this case, would be responsible for translating the format description (e.g., a JSON schema from an `$output_format` tag) into a formal grammar that directly guides the LLM's token selection during generation. This represents the most robust implementation of format enforcement.
+
+### **5.3. Optional Ordered Metadata**
+Derivative Protocols MAY include ordered metadata when sequence matters:
+
+* **`protocol_version`** (String, Optional): A version identifier for the derivative protocol.
+* **`payload_order`** (Array of Strings, Optional): Ordered list of payload tag keys.
+  Executors SHOULD process payload tags in this order when present. The payload
+  MUST contain exactly these tags and preserve this order.
+* **`processor_pipeline`** (Array of Strings, Optional): Ordered list of processor
+  names. Executors SHOULD apply processors in this sequence when multiple
+  processors are involved. When present, it requires payload_order and MUST
+  match the processor order implied by payload_order.
+
+Values in `payload_order` MUST reference keys in `core_tag_library`. Values in
+`processor_pipeline` MUST reference processors defined in `processor_semantics`.
+
+### **5.4. Tag Optionality**
+Each tag definition MAY include a **`required`** boolean (default: true). Tags
+omitted from the payload are only allowed when their definition explicitly sets
+`required: false`.
 
 ## **6. Example Walkthrough: A Creative Writing Task**
 
@@ -86,25 +121,36 @@ This example demonstrates the entire MPP flow.
 
 ```json
 {  
-  "meta_protocol_version": "1.1.3",  
+  "meta_protocol_version": "1.1.5",  
   "derivative_protocol_specification": {  
     "protocol_name": "Creative Writing Protocol (CWP)",  
+    "protocol_version": "1.0",
     "abstract": "A protocol for generating creative text based on structured narrative components.", 
+    "guiding_principles": {  
+      "minimalism": "Only include tags relevant to the creative request.",  
+      "fidelity": "Do not invent plot points or characters not specified by the user."  
+    },
     "tag_definition_schema": ["description", "processor", "type"],
-    "core_tag_library": {  
-      "$genre": { "description": "The literary genre of the story.", "processor": "theme_setter", "type": "string" },  
-      "$plot_points": { "description": "An array of key events or elements that must be in the story.", "processor": "narrative_injector", "type": "array" },  
-      "$style_constraint": { "description": "A stylistic or tonal constraint for the writing.", "processor": "style_guardrail", "type": "string" }  
-    },  
     "processor_semantics": {  
       "theme_setter": "Establishes the overall mood and genre conventions.",  
       "narrative_injector": "Ensures the core plot elements are included in the generated text.",  
       "style_guardrail": "Applies a specific literary style or voice to the generation."  
     },  
-    "guiding_principles": {  
-      "minimalism": "Only include tags relevant to the creative request.",  
-      "fidelity": "Do not invent plot points or characters not specified by the user."  
-    }  
+    "core_tag_library": {  
+      "$genre": { "description": "The literary genre of the story.", "processor": "theme_setter", "type": "string" },  
+      "$plot_points": { "description": "An array of key events or elements that must be in the story.", "processor": "narrative_injector", "type": "array" },  
+      "$style_constraint": { "description": "A stylistic or tonal constraint for the writing.", "processor": "style_guardrail", "type": "string" }  
+    },
+    "payload_order": [
+      "$genre",
+      "$plot_points",
+      "$style_constraint"
+    ],
+    "processor_pipeline": [
+      "theme_setter",
+      "narrative_injector",
+      "style_guardrail"
+    ]
   },  
   "derivative_protocol_payload": {  
     "$genre": "Horror",  
@@ -123,8 +169,23 @@ This example demonstrates the entire MPP flow.
 ```json
 {
   "protocol_name": "Structured Prompt Protocol (SPP)",
+  "protocol_version": "1.0",
   "abstract": "A general-purpose protocol for analytical and instructional tasks, treating prompt engineering as a data serialization problem.",
+  "guiding_principles": {
+    "minimalism": "Only include tags that are directly pertinent to the given prompt.",
+    "fidelity": "The payload should be a direct, structured representation of the source prompt's intent, not an invention of new requirements."
+  },
   "tag_definition_schema": ["description", "processor", "type"],
+  "processor_semantics": {
+    "core_content": "Forwards the primary data/context from the `$context` tag to the AI model for analysis.",
+    "instruction_handler": "Translates the `$task` into the main imperative instruction for the AI.",
+    "guardrail_pre": "A pre-generation processor that acts on `$directive` and `$constraint` tags to establish rules for the AI before it generates a response (e.g., by building a system prompt).",
+    "formatter": "A pre-generation processor that uses `$output_format` data to enforce a precise output structure. State-of-the-Art Implementation: Uses Grammar-based Constrained Decoding by translating a schema into a Context-Free Grammar (CFG) to guarantee syntactically perfect output.",
+    "assertion_post": "A post-generation processor that validates the AI's final output against rules in a `$validation` tag (e.g., using `json.loads()`).",
+    "reasoning_handler": "A pre-generation processor that configures the Executor's problem-solving approach based on the specified strategy (e.g., `chain_of_thought`).",
+    "metadata_handler": "Handles ancillary data from the `$metadata` tag for external purposes like logging, not for generation.",
+    "few_shot_handler": "Formats `$examples` into a structured set of demonstrations to prime the model."
+  },
   "core_tag_library": {
     "$context": {
       "description": "The primary data or information to be processed.",
@@ -171,20 +232,6 @@ This example demonstrates the entire MPP flow.
       "processor": "reasoning_handler",
       "type": "object"
     }
-  },
-  "processor_semantics": {
-    "core_content": "Forwards the primary data/context from the `$context` tag to the AI model for analysis.",
-    "instruction_handler": "Translates the `$task` into the main imperative instruction for the AI.",
-    "guardrail_pre": "A pre-generation processor that acts on `$directive` and `$constraint` tags to establish rules for the AI before it generates a response (e.g., by building a system prompt).",
-    "formatter": "A pre-generation processor that uses `$output_format` data to enforce a precise output structure. State-of-the-Art Implementation: Uses Grammar-based Constrained Decoding by translating a schema into a Context-Free Grammar (CFG) to guarantee syntactically perfect output.",
-    "assertion_post": "A post-generation processor that validates the AI's final output against rules in a `$validation` tag (e.g., using `json.loads()`).",
-    "reasoning_handler": "A pre-generation processor that configures the Executor's problem-solving approach based on the specified strategy (e.g., `chain_of_thought`).",
-    "metadata_handler": "Handles ancillary data from the `$metadata` tag for external purposes like logging, not for generation.",
-    "few_shot_handler": "Formats `$examples` into a structured set of demonstrations to prime the model."
-  },
-  "guiding_principles": {
-    "minimalism": "Only include tags that are directly pertinent to the given prompt.",
-    "fidelity": "The payload should be a direct, structured representation of the source prompt's intent, not an invention of new requirements."
   }
 }
 ```

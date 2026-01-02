@@ -2,19 +2,12 @@ from __future__ import annotations
 
 import dspy
 
-from .models import DerivativeProtocolSpecification, MPPBundle
-from .validations import (
-    validate_derivative_spec,
-    validate_mpp_bundle,
-    validate_payload,
-)
-
 
 class ProtocolArchitect(dspy.Signature):
     """Generate an MPP bundle from a high-level user goal, ideally via refinement."""
 
     user_goal = dspy.InputField(desc="High-level user goal to be encoded.")
-    meta_protocol_version = dspy.OutputField(desc="MPP spec version (e.g., 1.1.3).")
+    meta_protocol_version = dspy.OutputField(desc="MPP spec version (e.g., 1.1.5).")
     derivative_protocol_specification = dspy.OutputField(
         desc="Derivative protocol specification object."
     )

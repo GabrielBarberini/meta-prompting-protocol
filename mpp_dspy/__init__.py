@@ -9,7 +9,8 @@ except Exception as exc:
     class _DSPyMissing:
         def __init__(self, *_args, **_kwargs) -> None:
             raise ImportError(
-                "DSPy is required for ProtocolArchitect/ProtocolExecutor/QualityAssurance."
+                "DSPy is required for "
+                "ProtocolArchitect/ProtocolExecutor/QualityAssurance."
             ) from _DSPY_IMPORT_ERROR
 
     ProtocolArchitect = _DSPyMissing

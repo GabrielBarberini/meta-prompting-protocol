@@ -1,7 +1,7 @@
 # MPP: Meta-Prompting Protocol
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/MPP-v1.1.4-blue)](docs/meta_prompting_protocol_spec.md)
+[![Version](https://img.shields.io/badge/MPP-v1.1.5-blue)](docs/meta_prompting_protocol_spec.md)
 [![Website](https://camo.githubusercontent.com/e49e99e37f7d3db64fc81400ce926d621dd38746c68b678a10c54331835832fe/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f50726f6a6563742d576562736974652d677265656e)](https://gabrielbarberini.github.io/meta-prompting-protocol/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/GabrielBarberini/meta-prompting-protocol)
 
@@ -72,12 +72,22 @@ Derivate an appropriate protocol and build a MPP bundle encoding the following p
 And it would respond with a complete MPP bundle ready for an Executor to process e.g
 ```json
 {
-  "meta_protocol_version": "1.1.3",
+  "meta_protocol_version": "1.1.5",
   "derivative_protocol_specification": {
     "protocol_name": "Constrained Persona Protocol (CPP)",
     "protocol_version": "1.0",
     "abstract": "A protocol for generating creative text from a specific persona's point of view, while adhering to a strict set of stylistic and content-based output constraints.",
+    "guiding_principles": {
+      "fidelity": "The persona and constraints must be followed with absolute precision.",
+      "immersion": "The response should feel authentic to the specified persona."
+    },
     "tag_definition_schema": ["description", "processor", "type"],
+    "processor_semantics": {
+      "persona_setter": "Establishes the voice, tone, and knowledge base for the specified persona.",
+      "instruction_handler": "Translates the core task into the main imperative for the AI's response.",
+      "guardrail_pre": "A pre-generation processor that enforces absolute rules on the output, such as forbidding specific characters, words, or topics.",
+      "detail_injector": "Ensures a specific, named detail is incorporated accurately into the narrative."
+    },
     "core_tag_library": {
       "$persona": {
         "description": "The character or role the AI must adopt for the response.",
@@ -100,16 +110,18 @@ And it would respond with a complete MPP bundle ready for an Executor to process
         "type": "string"
       }
     },
-    "processor_semantics": {
-      "persona_setter": "Establishes the voice, tone, and knowledge base for the specified persona.",
-      "instruction_handler": "Translates the core task into the main imperative for the AI's response.",
-      "guardrail_pre": "A pre-generation processor that enforces absolute rules on the output, such as forbidding specific characters, words, or topics.",
-      "detail_injector": "Ensures a specific, named detail is incorporated accurately into the narrative."
-    },
-    "guiding_principles": {
-      "fidelity": "The persona and constraints must be followed with absolute precision.",
-      "immersion": "The response should feel authentic to the specified persona."
-    }
+    "payload_order": [
+      "$persona",
+      "$task_description",
+      "$output_constraints",
+      "$object_focus"
+    ],
+    "processor_pipeline": [
+      "persona_setter",
+      "instruction_handler",
+      "guardrail_pre",
+      "detail_injector"
+    ]
   },
   "derivative_protocol_payload": {
     "$persona": "Act as a medieval blacksmith.",
