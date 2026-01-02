@@ -65,7 +65,7 @@ processor_semantics, core_tag_library, then any optional ordered metadata
 (e.g., payload_order, processor_pipeline).
 
 JSON objects are unordered. If payload ordering matters, the derivative protocol
-SHOULD declare it explicitly (see 5.3).
+SHOULD declare it explicitly (see 5.2).
 
 ## **5. Mandatory Components of a Derivative Specification**
 
@@ -79,15 +79,12 @@ To be MPP-compliant, the derivative_protocol_specification object MUST contain t
 * **`core_tag_library`**: The dictionary of all valid tags for this protocol, defined according to the `tag_definition_schema`.
 
 No additional top-level keys are allowed beyond the mandatory components and the
-optional ordered metadata defined in 5.3.
+optional ordered metadata defined in 5.2.
 
 ### **5.1. Processor Semantics**
 A processor is a named function or instruction that defines the specific behavior the Executor agent must apply to the data contained within a tag. Each key in this section represents a processor, and its value describes the action it performs.
 
-### **5.2. Advanced processor implementation: Constrained Decoding**
-For Derivative Protocols that specify highly structured output formats (e.g. domain-specific languages), a compliant Executor should ideally implement **Grammar-based Constrained Decoding**. This technique ensures that the generated output is not just likely to be correct, but is *guaranteed* to be syntactically valid according to the specified format. The `formatter` processor, in this case, would be responsible for translating the format description (e.g., a JSON schema from an `$output_format` tag) into a formal grammar that directly guides the LLM's token selection during generation. This represents the most robust implementation of format enforcement.
-
-### **5.3. Optional Ordered Metadata**
+### **5.2. Optional Ordered Metadata**
 Derivative Protocols MAY include ordered metadata when sequence matters:
 
 * **`protocol_version`** (String, Optional): A version identifier for the derivative protocol.
@@ -102,7 +99,7 @@ Derivative Protocols MAY include ordered metadata when sequence matters:
 Values in `payload_order` MUST reference keys in `core_tag_library`. Values in
 `processor_pipeline` MUST reference processors defined in `processor_semantics`.
 
-### **5.4. Tag Optionality**
+### **5.3. Tag Optionality**
 Each tag definition MAY include a **`required`** boolean (default: true). Tags
 omitted from the payload are only allowed when their definition explicitly sets
 `required: false`.
@@ -180,7 +177,7 @@ This example demonstrates the entire MPP flow.
     "core_content": "Forwards the primary data/context from the `$context` tag to the AI model for analysis.",
     "instruction_handler": "Translates the `$task` into the main imperative instruction for the AI.",
     "guardrail_pre": "A pre-generation processor that acts on `$directive` and `$constraint` tags to establish rules for the AI before it generates a response (e.g., by building a system prompt).",
-    "formatter": "A pre-generation processor that uses `$output_format` data to enforce a precise output structure. State-of-the-Art Implementation: Uses Grammar-based Constrained Decoding by translating a schema into a Context-Free Grammar (CFG) to guarantee syntactically perfect output.",
+    "formatter": "A pre-generation processor that uses `$output_format` data to enforce a precise output structure and validate conformance.",
     "assertion_post": "A post-generation processor that validates the AI's final output against rules in a `$validation` tag (e.g., using `json.loads()`).",
     "reasoning_handler": "A pre-generation processor that configures the Executor's problem-solving approach based on the specified strategy (e.g., `chain_of_thought`).",
     "metadata_handler": "Handles ancillary data from the `$metadata` tag for external purposes like logging, not for generation.",
