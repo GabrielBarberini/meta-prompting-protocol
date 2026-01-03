@@ -75,6 +75,9 @@ print(final_response)
 Notes:
 - The refinement loops mirror the monadic polishing approach: propose -> validate
   -> refine until the bundle/output stabilizes.
+- Closed-world tasks: use stability checks as convergence and run QA as the last
+  gate. Open-world tasks: evaluate QA inside the loop and stop on QA pass or
+  max-iteration bounds.
 - Swap the stability check with a domain-specific comparison if needed.
 - Suggested refinement criteria for MPP: spec completeness, all processors defined,
   payload tags declared, minimalism (no unused tags), and executor output passes

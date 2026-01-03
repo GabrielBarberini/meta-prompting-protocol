@@ -39,6 +39,12 @@ MPP defines a two-stage, multi-agent workflow.
 
 MPP assumes that both protocol derivation (input layer) and protocol decoding (output layer) benefit from iterative polishing. A Protocol Architect SHOULD run a refine -> validate -> revise loop until the derived specification and payload stop changing materially. An Executor SHOULD apply the same loop during decoding, re-generating and re-validating until the output consistently satisfies the protocol's constraints.
 
+Closed-world outputs (e.g., schema-bound or deterministic outputs) SHOULD use
+stability checks as the convergence criterion and run QA only as a final gate.
+Open-world outputs (e.g., creative text) MAY not stabilize by simple diff; in
+those cases, QA SHOULD be evaluated inside the refinement loop, and the process
+SHOULD terminate on QA pass or max-iteration bounds.
+
 ## **4. MPP Bundle Structure**
 
 An MPP-compliant bundle MUST be a JSON object containing the following three top-level keys:
