@@ -11,12 +11,23 @@ Predictor = Callable[..., Any]
 Bundle = dict[str, Any]
 
 
+class VerticalStep(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    iteration: int
+    output: Any
+    qa_result: Optional[dict[str, Any]] = None
+    qa_passed: Optional[bool] = None
+    error: Optional[str] = None
+
+
 class BundleResult(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     bundle: Bundle
     iterations: int
     stable: bool
+    steps: Optional[list[VerticalStep]] = None
 
 
 class ExecutionResult(BaseModel):
@@ -28,6 +39,14 @@ class ExecutionResult(BaseModel):
     stable: bool
     qa_result: Optional[dict[str, Any]]
     qa_passed: Optional[bool]
+    steps: Optional[list[VerticalStep]] = None
+
+
+class VerticalResult(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    bundle_result: BundleResult
+    execution_result: ExecutionResult
 
 
 def _get_field(prediction: Any, name: str) -> Any:
@@ -144,6 +163,7 @@ class MPPAdapterPipeline:
     ) -> BundleResult:
         max_iters = self.architect_max_iters if max_iters is None else max_iters
         last_bundle: Optional[Bundle] = None
+        steps: list[VerticalStep] = []
         for i in range(max_iters):
             prompt = _refined_goal(user_goal, last_bundle)
             prediction = self.architect(user_goal=prompt)
@@ -160,11 +180,17 @@ class MPPAdapterPipeline:
             }
             bundle = normalize_mpp_bundle(bundle)
             self.validate_bundle(bundle)
+            steps.append(VerticalStep(iteration=i + 1, output=bundle))
             if last_bundle == bundle:
-                return BundleResult(bundle=bundle, iterations=i + 1, stable=True)
+                return BundleResult(
+                    bundle=bundle, iterations=i + 1, stable=True, steps=steps
+                )
             last_bundle = bundle
         return BundleResult(
-            bundle=last_bundle or {}, iterations=max_iters, stable=False
+            bundle=last_bundle or {},
+            iterations=max_iters,
+            stable=False,
+            steps=steps,
         )
 
     def execute(
@@ -186,6 +212,7 @@ class MPPAdapterPipeline:
         iterations = max_iters
         final_response = ""
         qa_feedback: Optional[Mapping[str, Any]] = None
+        steps: list[VerticalStep] = []
 
         if open_world and self.qa is None:
             raise ValueError("open_world execution requires a QA predictor.")
@@ -227,6 +254,15 @@ class MPPAdapterPipeline:
                         "previous_response": response,
                     }
 
+                steps.append(
+                    VerticalStep(
+                        iteration=i + 1,
+                        output=response,
+                        qa_result=qa_result,
+                        qa_passed=qa_passed,
+                    )
+                )
+
                 if last_comparable == comparable:
                     stable = True
                     iterations = i + 1
@@ -248,6 +284,7 @@ class MPPAdapterPipeline:
             stable=stable,
             qa_result=qa_result,
             qa_passed=qa_passed,
+            steps=steps,
         )
 
     def _run_qa(
@@ -267,3 +304,69 @@ class MPPAdapterPipeline:
             "verdict": _get_field(prediction, "verdict"),
             "issues": _get_field(prediction, "issues"),
         }
+
+
+class MPPVerticalRefiner:
+    """Wrapper for running the vertical refinement loops as a single module."""
+
+    def __init__(
+        self,
+        architect: Predictor,
+        executor: Predictor,
+        qa: Optional[Predictor] = None,
+        validate_bundle: Callable[[Mapping[str, Any]], None] = validate_mpp_bundle,
+        set_executor_feedback: Optional[
+            Callable[[Optional[Mapping[str, Any]]], None]
+        ] = None,
+        architect_max_iters: int = 10,
+        executor_max_iters: int = 10,
+    ) -> None:
+        self.pipeline = MPPAdapterPipeline(
+            architect=architect,
+            executor=executor,
+            qa=qa,
+            validate_bundle=validate_bundle,
+            set_executor_feedback=set_executor_feedback,
+            architect_max_iters=architect_max_iters,
+            executor_max_iters=executor_max_iters,
+        )
+
+    def build_bundle(
+        self, user_goal: str, max_iters: int | None = None
+    ) -> BundleResult:
+        return self.pipeline.build_bundle(user_goal, max_iters=max_iters)
+
+    def execute(
+        self,
+        bundle: Mapping[str, Any],
+        max_iters: int | None = None,
+        open_world: bool = False,
+        expect_reasoning: bool = False,
+    ) -> ExecutionResult:
+        return self.pipeline.execute(
+            bundle,
+            max_iters=max_iters,
+            open_world=open_world,
+            expect_reasoning=expect_reasoning,
+        )
+
+    def run(
+        self,
+        user_goal: str,
+        *,
+        open_world: bool,
+        architect_max_iters: int | None = None,
+        executor_max_iters: int | None = None,
+        expect_reasoning: bool = False,
+    ) -> VerticalResult:
+        bundle_result = self.build_bundle(user_goal, max_iters=architect_max_iters)
+        execution_result = self.execute(
+            bundle_result.bundle,
+            max_iters=executor_max_iters,
+            open_world=open_world,
+            expect_reasoning=expect_reasoning,
+        )
+        return VerticalResult(
+            bundle_result=bundle_result,
+            execution_result=execution_result,
+        )

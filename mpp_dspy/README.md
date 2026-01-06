@@ -45,6 +45,12 @@ print(exec_result.final_response)
 Notes:
 - The refinement loops mirror the monadic polishing approach: propose -> validate
   -> refine until the bundle/output stabilizes.
+- Longitudinal refinement (TextGrad-style) can be run separately over templates
+  with `{{MPP_MUTABLE:...}}` tokens to optimize prompt segments across datasets.
+- Vertical refinement returns per-iteration telemetry in `steps` on
+  `BundleResult` and `ExecutionResult` (includes outputs plus QA/errors).
+- For symmetry with longitudinal refinement, `MPPVerticalRefiner` wraps the
+  bundle and execution loops and returns a `VerticalResult`.
 - If the executor uses `dspy.ChainOfThought`, `ExecutionResult.reasoning` is
   populated and the loop enforces that reasoning is returned.
 - Closed-world tasks: use stability checks as convergence.

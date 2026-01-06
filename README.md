@@ -72,6 +72,32 @@ print(result.final_response)
 To plug in a custom provider, supply any DSPy-compatible LM to
 `dspy.settings.configure`. See `mpp_dspy/README.md` for notes.
 
+##### TextGrad-ready templates (optional)
+If you apply TextGrad or any prompt optimizer, keep the MPP structure intact and
+only mutate explicitly tagged blocks. MPP does not interpret the tokens; they
+serve as guardrails for your optimizer.
+
+Example (template tokens mark mutable segments):
+
+```
+You are a Protocol Architect.
+{{MPP_MUTABLE:architect_primer}}
+Keep outputs minimal and schema-compliant.
+{{/MPP_MUTABLE}}
+Always output JSON.
+```
+
+Recommended mutable blocks:
+`entry_prompt`, `architect_primer`, `executor_primer`, `strategy_payload`, plus
+protocol content (tag sets, schema keys, processor names, payload fields). Only
+the MPP spec text itself and the required bundle structure/order stay immutable.
+
+Refinement runs in two distinct loops:
+- Longitudinal loop (TextGrad or other optimizers) mutates the allowed text
+  segments to improve overall fit across a dataset.
+- Vertical loop (monadic refinement) iterates per request to stabilize a single
+  bundle/execution with validation/QA feedback.
+
 ##### Raw
 Download the [MPP Specification](docs/meta_prompting_protocol_spec.md) and attach it to an AI model session. Frame the AI as a "Protocol Architect" or "Executor" and start generating or executing MPP bundles.
 
@@ -175,3 +201,4 @@ This is a mortal's top craft. No wizardry, no odd spirits; just skill. A glint f
 ### Further reading
 
 - Zhang, Y., Yuan, Y., & Yao, A. C.-C. (2023). [Meta Prompting for AI Systems](https://arxiv.org/abs/2311.11482). *arXiv preprint arXiv:2311.11482*.
+- Fu, F. (2025). [The Meta-Prompting Protocol: Orchestrating LLMs via Adversarial Feedback Loops](https://arxiv.org/abs/2512.15053). *arXiv preprint arXiv:2512.15053*.

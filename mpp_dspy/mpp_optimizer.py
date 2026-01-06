@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Mapping, Optional
+from typing import Any, Callable, Mapping, Optional, Sequence
 
 import dspy
 from dspy.primitives.prediction import Prediction
 from dspy.teleprompt.teleprompt import Teleprompter
+from pydantic import BaseModel, ConfigDict
 
-from .mpp_adapter import BundleResult
+from .mpp_adapter import BundleResult, VerticalStep
+from .template_tokens import extract_mutable_blocks, render_mutable_template
 from .validations import normalize_mpp_bundle, validate_mpp_bundle
 
 Predictor = Callable[..., Any]
@@ -66,6 +68,7 @@ class MPPBundleOptimizer(Teleprompter):
         last_bundle: Optional[Bundle] = None
         last_valid_bundle: Optional[Bundle] = None
         last_error: Optional[str] = None
+        steps: list[VerticalStep] = []
         for i in range(max_iters):
             prompt = _refined_goal(user_goal, last_bundle, last_error)
             prediction = architect(user_goal=prompt)
@@ -86,10 +89,20 @@ class MPPBundleOptimizer(Teleprompter):
             except Exception as exc:  # noqa: BLE001
                 last_bundle = bundle
                 last_error = f"{type(exc).__name__}: {exc}"
+                steps.append(
+                    VerticalStep(
+                        iteration=i + 1,
+                        output=bundle,
+                        error=last_error,
+                    )
+                )
                 continue
             last_error = None
+            steps.append(VerticalStep(iteration=i + 1, output=bundle))
             if last_valid_bundle == bundle:
-                return BundleResult(bundle=bundle, iterations=i + 1, stable=True)
+                return BundleResult(
+                    bundle=bundle, iterations=i + 1, stable=True, steps=steps
+                )
             last_bundle = bundle
             last_valid_bundle = bundle
         if last_valid_bundle is None:
@@ -99,7 +112,10 @@ class MPPBundleOptimizer(Teleprompter):
                 f"{max_iters} iterations. Last error: {detail}"
             )
         return BundleResult(
-            bundle=last_valid_bundle, iterations=max_iters, stable=False
+            bundle=last_valid_bundle,
+            iterations=max_iters,
+            stable=False,
+            steps=steps,
         )
 
     def compile(
@@ -135,3 +151,117 @@ class MPPBundleOptimizer(Teleprompter):
                 )
 
         return _RefinedBundleModule(student)
+
+
+MutateFn = Callable[[Mapping[str, str], Sequence[Any]], Mapping[str, str]]
+ScoreFn = Callable[[str, Sequence[Any]], float]
+
+
+class LongitudinalStep(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    iteration: int
+    template: str
+    score: float
+
+
+class LongitudinalResult(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    template: str
+    score: float
+    iterations: int
+    history: list[LongitudinalStep]
+
+
+class MPPLongitudinalRefiner(Teleprompter):
+    """Longitudinal (dataset-level) refinement scaffold for TextGrad-style loops."""
+
+    def __init__(
+        self,
+        mutate_fn: MutateFn,
+        score_fn: ScoreFn,
+        *,
+        max_iters: int = 5,
+        maximize: bool = True,
+    ) -> None:
+        super().__init__()
+        self.mutate_fn = mutate_fn
+        self.score_fn = score_fn
+        self.max_iters = max_iters
+        self.maximize = maximize
+
+    def refine(
+        self,
+        template: str,
+        dataset: Sequence[Any],
+        *,
+        initial_overrides: Mapping[str, str] | None = None,
+    ) -> LongitudinalResult:
+        current_template = template
+        if initial_overrides:
+            current_template = render_mutable_template(
+                current_template, initial_overrides
+            )
+        current_blocks = extract_mutable_blocks(current_template)
+        if not current_blocks:
+            raise ValueError(
+                "No mutable blocks found. Add {{MPP_MUTABLE:...}} tokens to the "
+                "template before running longitudinal refinement."
+            )
+        best_template = current_template
+        best_score = self.score_fn(best_template, dataset)
+        history = [
+            LongitudinalStep(iteration=0, template=best_template, score=best_score)
+        ]
+
+        for i in range(1, self.max_iters + 1):
+            proposed_blocks = self.mutate_fn(current_blocks, dataset)
+            candidate_template = render_mutable_template(
+                current_template, proposed_blocks
+            )
+            candidate_blocks = extract_mutable_blocks(candidate_template)
+            candidate_score = self.score_fn(candidate_template, dataset)
+            history.append(
+                LongitudinalStep(
+                    iteration=i,
+                    template=candidate_template,
+                    score=candidate_score,
+                )
+            )
+
+            if self._is_better(candidate_score, best_score):
+                best_score = candidate_score
+                best_template = candidate_template
+                current_template = candidate_template
+                current_blocks = candidate_blocks
+
+        return LongitudinalResult(
+            template=best_template,
+            score=best_score,
+            iterations=len(history) - 1,
+            history=history,
+        )
+
+    def compile(
+        self,
+        student,
+        *,
+        trainset,
+        teacher=None,
+        valset=None,
+        **kwargs,
+    ):
+        template = getattr(student, "template", None)
+        if template is None:
+            raise ValueError(
+                "MPPLongitudinalRefiner requires a student with a .template attribute."
+            )
+        result = self.refine(template, trainset, **kwargs)
+        if hasattr(student, "with_template"):
+            return student.with_template(result.template)
+        setattr(student, "template", result.template)
+        return student
+
+    def _is_better(self, candidate: float, best: float) -> bool:
+        return candidate > best if self.maximize else candidate < best

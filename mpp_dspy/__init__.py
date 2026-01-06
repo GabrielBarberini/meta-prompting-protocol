@@ -1,5 +1,22 @@
 from .models import DerivativeProtocolSpecification, MPPBundle
-from .mpp_adapter import BundleResult, ExecutionResult, MPPAdapterPipeline
+from .mpp_adapter import (
+    BundleResult,
+    ExecutionResult,
+    MPPAdapterPipeline,
+    MPPVerticalRefiner,
+    VerticalResult,
+    VerticalStep,
+)
+from .mpp_optimizer import (
+    LongitudinalResult,
+    LongitudinalStep,
+    MPPLongitudinalRefiner,
+)
+from .template_tokens import (
+    extract_mutable_blocks,
+    list_mutable_blocks,
+    render_mutable_template,
+)
 from .validations import validate_derivative_spec, validate_mpp_bundle, validate_payload
 
 try:
@@ -40,4 +57,13 @@ __all__ = [
     "BundleResult",
     "ExecutionResult",
     "MPPAdapterPipeline",
+    "VerticalStep",
+    "VerticalResult",
+    "MPPVerticalRefiner",
+    "extract_mutable_blocks",
+    "list_mutable_blocks",
+    "render_mutable_template",
+    "LongitudinalResult",
+    "LongitudinalStep",
+    "MPPLongitudinalRefiner",
 ]
