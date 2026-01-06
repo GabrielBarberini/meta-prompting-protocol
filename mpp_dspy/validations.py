@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import ast
+import json
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
@@ -39,6 +41,25 @@ def validate_mpp_bundle(bundle: Mapping[str, Any]) -> None:
     )
     validate_derivative_spec(spec)
     validate_payload(spec, payload)
+
+
+def normalize_mpp_bundle(bundle: Mapping[str, Any]) -> dict[str, Any]:
+    """Normalize bundle fields that may arrive as JSON-encoded strings."""
+    _require_keys(bundle, REQUIRED_BUNDLE_FIELDS, "bundle")
+    meta_protocol_version = bundle["meta_protocol_version"]
+    if not isinstance(meta_protocol_version, str):
+        raise TypeError("bundle.meta_protocol_version must be a string")
+    return {
+        "meta_protocol_version": meta_protocol_version,
+        "derivative_protocol_specification": _require_mapping(
+            bundle["derivative_protocol_specification"],
+            "bundle.derivative_protocol_specification",
+        ),
+        "derivative_protocol_payload": _require_mapping(
+            bundle["derivative_protocol_payload"],
+            "bundle.derivative_protocol_payload",
+        ),
+    }
 
 
 def validate_derivative_spec(spec: Mapping[str, Any]) -> None:
@@ -189,9 +210,17 @@ def validate_payload(spec: Mapping[str, Any], payload: Mapping[str, Any]) -> Non
 
 
 def _require_mapping(value: Any, label: str) -> Mapping[str, Any]:
-    if not isinstance(value, Mapping):
+    if isinstance(value, Mapping):
+        return value
+    if isinstance(value, str):
+        text = _strip_code_fences(value)
+        if not text:
+            raise TypeError(f"{label} must be a mapping")
+        parsed = _parse_mapping(text)
+        if isinstance(parsed, Mapping):
+            return parsed
         raise TypeError(f"{label} must be a mapping")
-    return value
+    raise TypeError(f"{label} must be a mapping")
 
 
 def _require_keys(
@@ -207,3 +236,32 @@ def _is_string_list(value: Any) -> bool:
     if isinstance(value, (str, bytes)) or not isinstance(value, Sequence):
         return False
     return all(isinstance(item, str) for item in value)
+
+
+def _strip_code_fences(text: str) -> str:
+    stripped = text.strip()
+    if not stripped.startswith("```"):
+        return stripped
+    lines = stripped.splitlines()
+    if lines and lines[0].startswith("```"):
+        lines = lines[1:]
+    if lines and lines[-1].strip() == "```":
+        lines = lines[:-1]
+    return "\n".join(lines).strip()
+
+
+def _parse_mapping(text: str) -> Any:
+    candidates = [text]
+    for candidate in candidates:
+        for parser in (json.loads, ast.literal_eval):
+            try:
+                parsed = parser(candidate)
+            except (ValueError, SyntaxError):
+                continue
+            if isinstance(parsed, Mapping):
+                return parsed
+            if isinstance(parsed, str):
+                inner = parsed.strip()
+                if inner and inner != candidate:
+                    candidates.append(inner)
+    return None

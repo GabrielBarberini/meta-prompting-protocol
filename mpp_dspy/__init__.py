@@ -1,7 +1,10 @@
 from .models import DerivativeProtocolSpecification, MPPBundle
+from .mpp_adapter import BundleResult, ExecutionResult, MPPAdapterPipeline
 from .validations import validate_derivative_spec, validate_mpp_bundle, validate_payload
 
 try:
+    from .dspy_adapters import MPPArchitectAdapter, MPPExecutorAdapter, MPPQAAdapter
+    from .mpp_auto_adapter import MPPAutoAdapter
     from .mpp_signatures import ProtocolArchitect, ProtocolExecutor, QualityAssurance
 except Exception as exc:
     _DSPY_IMPORT_ERROR = exc
@@ -10,12 +13,16 @@ except Exception as exc:
         def __init__(self, *_args, **_kwargs) -> None:
             raise ImportError(
                 "DSPy is required for "
-                "ProtocolArchitect/ProtocolExecutor/QualityAssurance."
+                "ProtocolArchitect/ProtocolExecutor/QualityAssurance and MPP adapters."
             ) from _DSPY_IMPORT_ERROR
 
     ProtocolArchitect = _DSPyMissing
     ProtocolExecutor = _DSPyMissing
     QualityAssurance = _DSPyMissing
+    MPPArchitectAdapter = _DSPyMissing
+    MPPExecutorAdapter = _DSPyMissing
+    MPPQAAdapter = _DSPyMissing
+    MPPAutoAdapter = _DSPyMissing
 
 __all__ = [
     "DerivativeProtocolSpecification",
@@ -26,4 +33,11 @@ __all__ = [
     "ProtocolArchitect",
     "ProtocolExecutor",
     "QualityAssurance",
+    "MPPArchitectAdapter",
+    "MPPExecutorAdapter",
+    "MPPQAAdapter",
+    "MPPAutoAdapter",
+    "BundleResult",
+    "ExecutionResult",
+    "MPPAdapterPipeline",
 ]

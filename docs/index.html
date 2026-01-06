@@ -21,6 +21,7 @@
             <div class="hidden md:flex items-baseline space-x-6">
                 <a href="#philosophy" class="nav-link border-b-2 border-transparent pb-1 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Philosophy</a>
                 <a href="#workflow" class="nav-link border-b-2 border-transparent pb-1 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Workflow</a>
+                <a href="#dspy" class="nav-link border-b-2 border-transparent pb-1 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">DSPy Adapter</a>
                 <a href="#example" class="nav-link border-b-2 border-transparent pb-1 text-sm font-medium text-slate-600 hover:text-indigo-600 transition-colors">Example</a>
                 <a href="https://github.com/gabrielbarberini/meta-prompting-protocol" target="_blank" class="bg-slate-800 text-white font-semibold px-4 py-2 rounded-md hover:bg-slate-900 transition-colors text-sm">View on GitHub ↗</a>
             </div>
@@ -96,6 +97,31 @@
                     <p class="mt-4 text-slate-600">A third AI agent validates the Executor's output against the original user's intent, using the structured data in the bundle to ensure high fidelity and correctness.</p>
                 </div>
 
+            </div>
+        </section>
+
+        <section id="dspy" class="py-16 md:py-24 border-t border-slate-200">
+            <div class="text-center">
+                <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">DSPy Adapter Interface</h2>
+                <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600">
+                    MPP can also be consumed as a DSPy module. MPPAutoAdapter wraps the two-stage adapter flow and runs
+                    bundle refinement internally, while selecting the QA-augmented loop for open-world tasks.
+                </p>
+            </div>
+            <div class="mt-12 flex flex-col items-center gap-8">
+                <img src="assets/dspy-adapter-flow.svg" alt="DSPy adapter flow for MPP" class="w-full max-w-5xl shadow-sm border border-slate-200 rounded-lg bg-white p-4" />
+                <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm w-full max-w-3xl text-left">
+                    <p class="text-sm font-semibold text-slate-600">Example</p>
+                    <pre class="mt-3 text-sm text-slate-800 overflow-x-auto"><code>import dspy
+from mpp_dspy import MPPAutoAdapter
+
+lm = dspy.OpenAI(model="gpt-4o-mini")
+dspy.settings.configure(lm=lm)
+
+program = MPPAutoAdapter()
+result = program(user_goal="Draft a crisp product launch email.", open_world=True)
+print(result.final_response)</code></pre>
+                </div>
             </div>
         </section>
 

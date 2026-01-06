@@ -1,1 +1,2 @@
 dspy
+pydantic==2.11.9

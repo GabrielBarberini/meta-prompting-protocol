@@ -1,7 +1,7 @@
 # MPP: Meta-Prompting Protocol
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/MPP-v1.1.5-blue)](docs/meta_prompting_protocol_spec.md)
+[![Version](https://img.shields.io/badge/MPP-v1.2.0-blue)](docs/meta_prompting_protocol_spec.md)
 [![Website](https://camo.githubusercontent.com/e49e99e37f7d3db64fc81400ce926d621dd38746c68b678a10c54331835832fe/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f50726f6a6563742d576562736974652d677265656e)](https://gabrielbarberini.github.io/meta-prompting-protocol/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/GabrielBarberini/meta-prompting-protocol)
 
@@ -72,7 +72,7 @@ Derivate an appropriate protocol and build a MPP bundle encoding the following p
 And it would respond with a complete MPP bundle ready for an Executor to process e.g
 ```json
 {
-  "meta_protocol_version": "1.1.5",
+  "meta_protocol_version": "1.2.0",
   "derivative_protocol_specification": {
     "protocol_name": "Constrained Persona Protocol (CPP)",
     "protocol_version": "1.0",
@@ -146,6 +146,25 @@ Upon my hot anvil, I will pound hard iron, folding it on and on, making its body
 Its proud styling is 'Glimmerfang'.
 
 This is a mortal's top craft. No wizardry, no odd spirits; just skill. A glint from its sharp facing is a sign of its quality, a bright light in a dim spot. A truly grand sword for a bold man.
+```
+
+#### DSPy Adapter
+If you are using DSPy, `MPPAutoAdapter` wraps the full MPP workflow as a single module.
+
+```python
+import dspy
+
+from mpp_dspy import MPPAutoAdapter
+
+lm = dspy.OpenAI(model="gpt-4o-mini")
+dspy.settings.configure(lm=lm)
+
+program = MPPAutoAdapter()
+result = program(
+  user_goal="Draft a crisp product launch email.",
+  open_world=True,
+)
+print(result.final_response)
 ```
 
 

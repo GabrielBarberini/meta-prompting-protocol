@@ -1,6 +1,6 @@
 # **Meta-Prompting Protocol Specification (MPP)**
 
-Version 1.1.5
+Version 1.2.0
 
 ## **1. Abstract**
 
@@ -55,7 +55,7 @@ An MPP-compliant bundle MUST be a JSON object containing the following three top
   
 ```json
 {  
-  "meta_protocol_version": "1.1.5",  
+  "meta_protocol_version": "1.2.0",  
   "derivative_protocol_specification": { ... },  
   "derivative_protocol_payload": { ... }  
 }
@@ -110,6 +110,28 @@ Each tag definition MAY include a **`required`** boolean (default: true). Tags
 omitted from the payload are only allowed when their definition explicitly sets
 `required: false`.
 
+### **5.4 Strategy Selection**
+Derivative protocols MUST declare the problem-solving or prompting strategy to be
+used by the Executor. This is expressed via a strategy processor in
+`processor_semantics` and at least one strategy tag in the `core_tag_library`
+(e.g., `$reasoning_strategy`, `$examples`, `$meta_prompt`, or a generic `$strategy`).
+
+If no specialized strategy is needed, the Architect MUST still supply a strategy
+tag in the payload with a neutral value such as `any` or `default`. Strategy tags
+SHOULD be marked `required: true` unless explicitly optional.
+
+When a strategy requires additional context, the Architect MUST provide the
+corresponding tag values in the payload (for example, `few_shot_handler` requires
+a non-empty `$examples` array). Executors SHOULD treat missing required strategy
+inputs as validation errors.
+
+When present, Executors SHOULD apply strategy processors in `processor_pipeline`
+order before generating the final response. Strategy tags SHOULD be explicit and
+minimal; they must not replace task content tags and MUST remain consistent with
+the protocol's guiding_principles (e.g., fidelity, minimalism). If multiple
+strategies are provided, the protocol SHOULD define precedence via
+`processor_pipeline` or an explicit policy tag (e.g., `$strategy_policy`).
+
 ## **6. Example Walkthrough: A Creative Writing Task**
 
 This example demonstrates the entire MPP flow.
@@ -124,7 +146,7 @@ This example demonstrates the entire MPP flow.
 
 ```json
 {  
-  "meta_protocol_version": "1.1.5",  
+  "meta_protocol_version": "1.2.0",  
   "derivative_protocol_specification": {  
     "protocol_name": "Creative Writing Protocol (CWP)",  
     "protocol_version": "1.0",
