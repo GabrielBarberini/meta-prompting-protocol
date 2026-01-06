@@ -49,6 +49,27 @@ An MPP bundle contains the full rulebook alongside the data.
 3.  **Executor (MPP aware):** Receives the bundle, learns the new protocol, and generates a horror story based on the structured payload.
 
 #### Quick Start
+
+##### DSPy
+If you are using DSPy, `MPPAutoAdapter` wraps the full MPP workflow as a single module.
+
+```python
+import dspy
+
+from mpp_dspy import MPPAutoAdapter
+
+lm = dspy.OpenAI(model="gpt-4o-mini")
+dspy.settings.configure(lm=lm)
+
+program = MPPAutoAdapter()
+result = program(
+  user_goal="Draft a crisp product launch email.",
+  open_world=True,
+)
+print(result.final_response)
+```
+
+##### Raw
 Download the [MPP Specification](docs/meta_prompting_protocol_spec.md) and attach it to an AI model session. Frame the AI as a "Protocol Architect" or "Executor" and start generating or executing MPP bundles.
 
 E.g., to create a Protocol Architect:
@@ -147,26 +168,6 @@ Its proud styling is 'Glimmerfang'.
 
 This is a mortal's top craft. No wizardry, no odd spirits; just skill. A glint from its sharp facing is a sign of its quality, a bright light in a dim spot. A truly grand sword for a bold man.
 ```
-
-#### DSPy Adapter
-If you are using DSPy, `MPPAutoAdapter` wraps the full MPP workflow as a single module.
-
-```python
-import dspy
-
-from mpp_dspy import MPPAutoAdapter
-
-lm = dspy.OpenAI(model="gpt-4o-mini")
-dspy.settings.configure(lm=lm)
-
-program = MPPAutoAdapter()
-result = program(
-  user_goal="Draft a crisp product launch email.",
-  open_world=True,
-)
-print(result.final_response)
-```
-
 
 ### Further reading
 
