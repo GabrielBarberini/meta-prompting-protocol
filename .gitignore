@@ -2,3 +2,11 @@
 __pycache__/
 .ruff_cache/
 .pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+junit.xml
+pytest.xml
+report.xml
+report.json
+report.html

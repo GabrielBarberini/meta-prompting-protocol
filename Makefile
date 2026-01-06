@@ -12,14 +12,23 @@ else
 RUFF := ruff
 endif
 
+ifneq (,$(wildcard $(VENV_BIN)/pytest))
+PYTEST := $(VENV_BIN)/pytest
+else
+PYTEST := pytest
+endif
+
 format: black ruff
 
 black:
 	$(BLACK) ./mpp_dspy || true
-	$(BLACK) ./scripts || true
+	$(BLACK) ./tests || true
 
 ruff:
 	$(RUFF) check --fix ./mpp_dspy || true
-	$(RUFF) check --fix ./scripts || true
+	$(RUFF) check --fix ./tests || true
 
-.PHONY: black ruff format
+test:
+	$(PYTEST) ./tests
+
+.PHONY: black ruff format test

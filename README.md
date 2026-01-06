@@ -69,6 +69,9 @@ result = program(
 print(result.final_response)
 ```
 
+To plug in a custom provider, supply any DSPy-compatible LM to
+`dspy.settings.configure`. See `mpp_dspy/README.md` for notes.
+
 ##### Raw
 Download the [MPP Specification](docs/meta_prompting_protocol_spec.md) and attach it to an AI model session. Frame the AI as a "Protocol Architect" or "Executor" and start generating or executing MPP bundles.
 

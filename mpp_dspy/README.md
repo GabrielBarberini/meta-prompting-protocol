@@ -78,3 +78,8 @@ print(result.final_response)
 
 If you pass a `dspy.ChainOfThought` executor into `MPPAutoAdapter`, the result
 includes `executor_reasoning`.
+
+## Client Interface
+
+`MPPAutoAdapter` works with any DSPy-compatible LM. Configure DSPy with the
+provider of your choice and pass it to `dspy.settings.configure`.
