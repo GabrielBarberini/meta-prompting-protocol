@@ -24,15 +24,26 @@ def _get_field(prediction: Any, name: str) -> Any:
     raise AttributeError(f"Prediction missing attribute: {name}")
 
 
-def _refined_goal(user_goal: str, previous_bundle: Optional[Mapping[str, Any]]) -> str:
-    if previous_bundle is None:
+def _refined_goal(
+    user_goal: str,
+    previous_bundle: Optional[Mapping[str, Any]],
+    error_message: Optional[str] = None,
+) -> str:
+    if previous_bundle is None and error_message is None:
         return user_goal
-    return (
-        f"{user_goal}\n\nPrevious bundle:\n"
-        f"{json.dumps(previous_bundle, indent=2, ensure_ascii=True)}\n"
+    parts = [user_goal]
+    if previous_bundle is not None:
+        parts.append(
+            "Previous bundle:\n"
+            f"{json.dumps(previous_bundle, indent=2, ensure_ascii=True)}"
+        )
+    if error_message:
+        parts.append(f"Validation error:\n{error_message}")
+    parts.append(
         "Refine for stability and correctness. If the previous bundle is valid, "
         "return it verbatim."
     )
+    return "\n\n".join(parts)
 
 
 class MPPBundleOptimizer(Teleprompter):
@@ -53,8 +64,10 @@ class MPPBundleOptimizer(Teleprompter):
     ) -> BundleResult:
         max_iters = self.max_iters if max_iters is None else max_iters
         last_bundle: Optional[Bundle] = None
+        last_valid_bundle: Optional[Bundle] = None
+        last_error: Optional[str] = None
         for i in range(max_iters):
-            prompt = _refined_goal(user_goal, last_bundle)
+            prompt = _refined_goal(user_goal, last_bundle, last_error)
             prediction = architect(user_goal=prompt)
             bundle = {
                 "meta_protocol_version": _get_field(
@@ -68,12 +81,25 @@ class MPPBundleOptimizer(Teleprompter):
                 ),
             }
             bundle = normalize_mpp_bundle(bundle)
-            self.validate_bundle(bundle)
-            if last_bundle == bundle:
+            try:
+                self.validate_bundle(bundle)
+            except Exception as exc:  # noqa: BLE001
+                last_bundle = bundle
+                last_error = f"{type(exc).__name__}: {exc}"
+                continue
+            last_error = None
+            if last_valid_bundle == bundle:
                 return BundleResult(bundle=bundle, iterations=i + 1, stable=True)
             last_bundle = bundle
+            last_valid_bundle = bundle
+        if last_valid_bundle is None:
+            detail = last_error or "Unknown error."
+            raise ValueError(
+                "Failed to produce a valid MPP bundle after "
+                f"{max_iters} iterations. Last error: {detail}"
+            )
         return BundleResult(
-            bundle=last_bundle or {}, iterations=max_iters, stable=False
+            bundle=last_valid_bundle, iterations=max_iters, stable=False
         )
 
     def compile(
