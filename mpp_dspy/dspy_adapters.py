@@ -77,8 +77,18 @@ class MPPBaseAdapter(JSONAdapter):
 
 
 class MPPArchitectAdapter(MPPBaseAdapter):
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(
+        self,
+        *args,
+        expect_reasoning: bool = False,
+        **kwargs,
+    ) -> None:
         role_instructions = kwargs.pop("role_instructions", _ARCHITECT_PRIMER)
+        if expect_reasoning:
+            role_instructions = (
+                f"{role_instructions}\n"
+                "- If a reasoning field is required, provide chain-of-thought in it."
+            )
         super().__init__(*args, role_instructions=role_instructions, **kwargs)
 
 

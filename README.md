@@ -1,7 +1,7 @@
 # MPP: Meta-Prompting Protocol
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/MPP-v1.2.0-blue)](docs/meta_prompting_protocol_spec.md)
+[![Version](https://img.shields.io/badge/MPP-v1.3.0-blue)](docs/meta_prompting_protocol_spec.md)
 [![Website](https://camo.githubusercontent.com/e49e99e37f7d3db64fc81400ce926d621dd38746c68b678a10c54331835832fe/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f50726f6a6563742d576562736974652d677265656e)](https://gabrielbarberini.github.io/meta-prompting-protocol/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/GabrielBarberini/meta-prompting-protocol)
 
@@ -43,6 +43,20 @@ An MPP bundle contains the full rulebook alongside the data.
 }
 ```
 
+#### Workflow Diagram
+
+```mermaid
+flowchart LR
+  U[User Goal] --> A[Architect<br/>(Fixed Adapter)]
+  A --> B[Bundle<br/>Spec + Payload]
+  B --> E[Executor<br/>(Derived Adapter)]
+  E --> QF[Final QA<br/>(closed-world)]
+  QF --> R[Final Response]
+  E -. "open_world: QA loop" .-> Q[QA]
+  Q -. feedback .-> E
+  E -. "failure feedback" .-> A
+```
+
 #### Example Workflow
 1.  **User Input:** "Write a horror story about a lighthouse keeper."
 2.  **Protocol Architect (MPP aware):** Derivates a MPP compliant protocol on the fly with tags like `$genre` and `$plot_points`. Then encodes the user's request accordingly and bundles it with the generated protocol spec.
@@ -72,6 +86,10 @@ print(result.final_response)
 To plug in a custom provider, supply any DSPy-compatible LM to
 `dspy.settings.configure`. See `mpp_dspy/README.md` for notes.
 
+For a full longitudinal+vertical pipeline, use `MPPFullPipeline` with a
+longitudinal template and mutation strategy, then run vertical refinement on the
+optimized blocks (see `mpp_dspy/README.md`).
+
 ##### TextGrad-ready templates (optional)
 If you apply TextGrad or any prompt optimizer, keep the MPP structure intact and
 only mutate explicitly tagged blocks. MPP does not interpret the tokens; they
@@ -97,6 +115,21 @@ Refinement runs in two distinct loops:
   segments to improve overall fit across a dataset.
 - Vertical loop (monadic refinement) iterates per request to stabilize a single
   bundle/execution with validation/QA feedback.
+Longitudinal scoring is pluggable: implement `LongitudinalMetric` to replace the
+default trace-cost metric used by `MPPFullPipeline`.
+
+##### Bilevel Optimization (Why both loops matter)
+You can view MPP as a bilevel system:
+- **Inner (vertical) loop:** guarantees correctness for a single request, but
+  can be costly if it needs multiple retries.
+- **Outer (longitudinal) loop:** tunes prompts across a dataset to reduce that
+  inner-loop cost over time.
+
+Important: do not score longitudinal updates solely on the final answer.
+If the vertical loop "fixes" errors, the prompt can look perfect while still
+being expensive. Instead, score the trace cost (iteration counts, QA failures,
+validation errors) and feed intermediate error traces to the optimizer. The
+goal is not just convergence, but faster convergence.
 
 ##### Raw
 Download the [MPP Specification](docs/meta_prompting_protocol_spec.md) and attach it to an AI model session. Frame the AI as a "Protocol Architect" or "Executor" and start generating or executing MPP bundles.
@@ -122,7 +155,7 @@ Derivate an appropriate protocol and build a MPP bundle encoding the following p
 And it would respond with a complete MPP bundle ready for an Executor to process e.g
 ```json
 {
-  "meta_protocol_version": "1.2.0",
+  "meta_protocol_version": "1.3.0",
   "derivative_protocol_specification": {
     "protocol_name": "Constrained Persona Protocol (CPP)",
     "protocol_version": "1.0",

@@ -1,3 +1,4 @@
+from .metrics import LongitudinalMetric, TraceCostMetric
 from .models import DerivativeProtocolSpecification, MPPBundle
 from .mpp_adapter import (
     BundleResult,
@@ -9,7 +10,9 @@ from .mpp_adapter import (
 )
 from .mpp_optimizer import (
     LongitudinalResult,
+    LongitudinalScore,
     LongitudinalStep,
+    LongitudinalTrace,
     MPPLongitudinalRefiner,
 )
 from .template_tokens import (
@@ -21,7 +24,12 @@ from .validations import validate_derivative_spec, validate_mpp_bundle, validate
 
 try:
     from .dspy_adapters import MPPArchitectAdapter, MPPExecutorAdapter, MPPQAAdapter
-    from .mpp_auto_adapter import MPPAutoAdapter
+    from .mpp_auto_adapter import (
+        FullPipelineResult,
+        LongitudinalCase,
+        MPPAutoAdapter,
+        MPPFullPipeline,
+    )
     from .mpp_signatures import ProtocolArchitect, ProtocolExecutor, QualityAssurance
 except Exception as exc:
     _DSPY_IMPORT_ERROR = exc
@@ -40,6 +48,9 @@ except Exception as exc:
     MPPExecutorAdapter = _DSPyMissing
     MPPQAAdapter = _DSPyMissing
     MPPAutoAdapter = _DSPyMissing
+    MPPFullPipeline = _DSPyMissing
+    FullPipelineResult = _DSPyMissing
+    LongitudinalCase = _DSPyMissing
 
 __all__ = [
     "DerivativeProtocolSpecification",
@@ -54,6 +65,9 @@ __all__ = [
     "MPPExecutorAdapter",
     "MPPQAAdapter",
     "MPPAutoAdapter",
+    "MPPFullPipeline",
+    "FullPipelineResult",
+    "LongitudinalCase",
     "BundleResult",
     "ExecutionResult",
     "MPPAdapterPipeline",
@@ -64,6 +78,10 @@ __all__ = [
     "list_mutable_blocks",
     "render_mutable_template",
     "LongitudinalResult",
+    "LongitudinalScore",
     "LongitudinalStep",
+    "LongitudinalTrace",
     "MPPLongitudinalRefiner",
+    "LongitudinalMetric",
+    "TraceCostMetric",
 ]

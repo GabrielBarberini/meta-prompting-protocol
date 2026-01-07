@@ -1,6 +1,6 @@
 # **Meta-Prompting Protocol Specification (MPP)**
 
-Version 1.2.0
+Version 1.3.0
 
 ## **1. Abstract**
 
@@ -55,7 +55,7 @@ An MPP-compliant bundle MUST be a JSON object containing the following three top
   
 ```json
 {  
-  "meta_protocol_version": "1.2.0",  
+  "meta_protocol_version": "1.3.0",  
   "derivative_protocol_specification": { ... },  
   "derivative_protocol_payload": { ... }  
 }
@@ -132,6 +132,14 @@ the protocol's guiding_principles (e.g., fidelity, minimalism). If multiple
 strategies are provided, the protocol SHOULD define precedence via
 `processor_pipeline` or an explicit policy tag (e.g., `$strategy_policy`).
 
+Acceptable strategy labels (from https://www.promptingguide.ai/techniques) are:
+`zero_shot`, `few_shot`, `chain_of_thought`, `meta_prompting`, `self_consistency`,
+`generate_knowledge`, `prompt_chaining`, `tree_of_thoughts`,
+`retrieval_augmented_generation`, `automatic_reasoning_and_tool_use`,
+`automatic_prompt_engineer`, `active_prompt`, `directional_stimulus_prompting`,
+`program_aided_language_models`, `react`, `reflexion`, `multimodal_cot`,
+`graph_prompting`.
+
 ## **6. Example Walkthrough: A Creative Writing Task**
 
 This example demonstrates the entire MPP flow.
@@ -146,7 +154,7 @@ This example demonstrates the entire MPP flow.
 
 ```json
 {  
-  "meta_protocol_version": "1.2.0",  
+  "meta_protocol_version": "1.3.0",  
   "derivative_protocol_specification": {  
     "protocol_name": "Creative Writing Protocol (CWP)",  
     "protocol_version": "1.0",

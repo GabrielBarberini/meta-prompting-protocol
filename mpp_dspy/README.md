@@ -47,18 +47,36 @@ Notes:
   -> refine until the bundle/output stabilizes.
 - Longitudinal refinement (TextGrad-style) can be run separately over templates
   with `{{MPP_MUTABLE:...}}` tokens to optimize prompt segments across datasets.
+- `MPPLongitudinalRefiner` can pass vertical traces back into your
+  `mutate_function` if it accepts a third argument. Return a `LongitudinalScore`
+  with `traces` from `score_function` to expose iteration counts and QA errors.
+- `MPPFullPipeline` accepts a `metric` implementing `LongitudinalMetric` so you
+  can replace the default trace-cost scoring with your own evaluator.
 - Vertical refinement returns per-iteration telemetry in `steps` on
   `BundleResult` and `ExecutionResult` (includes outputs plus QA/errors).
 - For symmetry with longitudinal refinement, `MPPVerticalRefiner` wraps the
   bundle and execution loops and returns a `VerticalResult`.
+- `MPPAutoAdapter` accepts `architect_role_instructions`,
+  `executor_role_instructions`, and `qa_role_instructions` to override the
+  default role primers (useful for longitudinal prompt optimization).
+- `MPPAutoAdapter` also accepts `architect_lm`, `executor_lm`, and `qa_lm` so
+  each stage can use a different LM (or temperature/RAG wrapper) while still
+  sharing the same adapters.
+- `MPPFullPipeline` runs longitudinal optimization around the vertical loops,
+  so each longitudinal step evaluates full MPP executions before selecting the
+  best template blocks.
 - If the executor uses `dspy.ChainOfThought`, `ExecutionResult.reasoning` is
   populated and the loop enforces that reasoning is returned.
-- Closed-world tasks: use stability checks as convergence.
-- Open-world tasks: set `open_world=True` to run QA-augmented refinement and
-  stop on QA pass or max-iteration bounds.
-- Use `max_iters` to cap both loops. `MPPAutoAdapter` exposes per-stage limits
-  via `architect_max_iters`/`executor_max_iters`. (If you instantiate
-  `MPPAdapterPipeline` directly, it accepts the same parameters.)
+- Closed-world tasks: use stability checks as convergence and run QA once at the
+  end.
+- Open-world tasks: set `open_world=True` to run QA-augmented refinement on every
+  iteration and stop on QA pass or max-iteration bounds.
+- If the executor fails to converge within its cap, MPPAutoAdapter feeds the
+  failure signal back into the architect and rebuilds the bundle, resetting the
+  executor loop.
+- Use `architect_max_iters`/`executor_max_iters` to cap the vertical loops.
+  (If you instantiate `MPPAdapterPipeline` directly, it accepts the same
+  parameters.)
 - Swap the stability check with a domain-specific comparison if needed.
 - Suggested refinement criteria for MPP: spec completeness, all processors defined,
   payload tags declared, minimalism (no unused tags), and executor output passes

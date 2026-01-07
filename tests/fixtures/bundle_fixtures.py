@@ -7,7 +7,7 @@ import pytest
 def mpp_bundle_minimal() -> dict:
     """Return a minimal, valid MPP bundle for tests."""
     return {
-        "meta_protocol_version": "1.2.0",
+        "meta_protocol_version": "1.3.0",
         "derivative_protocol_specification": {
             "protocol_name": "Minimal Protocol",
             "abstract": "Minimal protocol used for unit tests.",

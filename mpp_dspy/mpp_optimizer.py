@@ -1,14 +1,27 @@
 from __future__ import annotations
 
+import inspect
 import json
 from typing import Any, Callable, Mapping, Optional, Sequence
 
-import dspy
-from dspy.primitives.prediction import Prediction
-from dspy.teleprompt.teleprompt import Teleprompter
-from pydantic import BaseModel, ConfigDict
+try:
+    import dspy
+    from dspy.primitives.prediction import Prediction
+    from dspy.teleprompt.teleprompt import Teleprompter
+except Exception as exc:  # pragma: no cover - exercised in minimal envs
+    dspy = None
+    _DSPY_IMPORT_ERROR = exc
 
-from .mpp_adapter import BundleResult, VerticalStep
+    class Teleprompter:  # type: ignore[override]
+        pass
+
+    class Prediction:  # type: ignore[override]
+        pass
+
+
+from pydantic import BaseModel, ConfigDict, Field
+
+from .mpp_adapter import BundleResult, ExecutionResult, VerticalStep
 from .template_tokens import extract_mutable_blocks, render_mutable_template
 from .validations import normalize_mpp_bundle, validate_mpp_bundle
 
@@ -40,10 +53,10 @@ def _refined_goal(
             f"{json.dumps(previous_bundle, indent=2, ensure_ascii=True)}"
         )
     if error_message:
-        parts.append(f"Validation error:\n{error_message}")
+        parts.append(f"Refinement feedback:\n{error_message}")
     parts.append(
-        "Refine for stability and correctness. If the previous bundle is valid, "
-        "return it verbatim."
+        "Refine for stability and correctness. If the previous bundle is valid and "
+        "addresses the feedback, return it verbatim."
     )
     return "\n\n".join(parts)
 
@@ -62,16 +75,42 @@ class MPPBundleOptimizer(Teleprompter):
         self.validate_bundle = validate_bundle
 
     def refine(
-        self, architect: Predictor, user_goal: str, max_iters: int | None = None
+        self,
+        architect: Predictor,
+        user_goal: str,
+        max_iters: int | None = None,
+        *,
+        previous_bundle: Optional[Mapping[str, Any]] = None,
+        error_message: Optional[str] = None,
     ) -> BundleResult:
         max_iters = self.max_iters if max_iters is None else max_iters
-        last_bundle: Optional[Bundle] = None
+        last_bundle: Optional[Bundle] = (
+            dict(previous_bundle) if previous_bundle is not None else None
+        )
         last_valid_bundle: Optional[Bundle] = None
-        last_error: Optional[str] = None
+        last_error: Optional[str] = error_message
+        if previous_bundle is not None:
+            try:
+                self.validate_bundle(previous_bundle)
+            except Exception:  # noqa: BLE001
+                last_error = error_message
+            else:
+                last_valid_bundle = dict(previous_bundle)
         steps: list[VerticalStep] = []
         for i in range(max_iters):
             prompt = _refined_goal(user_goal, last_bundle, last_error)
-            prediction = architect(user_goal=prompt)
+            try:
+                prediction = architect(user_goal=prompt)
+            except Exception as exc:  # noqa: BLE001
+                last_error = f"{type(exc).__name__}: {exc}"
+                steps.append(
+                    VerticalStep(
+                        iteration=i + 1,
+                        output=None,
+                        error=last_error,
+                    )
+                )
+                continue
             bundle = {
                 "meta_protocol_version": _get_field(
                     prediction, "meta_protocol_version"
@@ -127,6 +166,8 @@ class MPPBundleOptimizer(Teleprompter):
         valset=None,
         **kwargs,
     ):
+        if dspy is None:
+            raise ImportError("DSPy is required for compile().") from _DSPY_IMPORT_ERROR
         optimizer = self
 
         class _RefinedBundleModule(dspy.Module):
@@ -153,8 +194,7 @@ class MPPBundleOptimizer(Teleprompter):
         return _RefinedBundleModule(student)
 
 
-MutateFn = Callable[[Mapping[str, str], Sequence[Any]], Mapping[str, str]]
-ScoreFn = Callable[[str, Sequence[Any]], float]
+MutateFunction = Callable[..., Mapping[str, str]]
 
 
 class LongitudinalStep(BaseModel):
@@ -172,6 +212,32 @@ class LongitudinalResult(BaseModel):
     score: float
     iterations: int
     history: list[LongitudinalStep]
+    blocks: dict[str, str] = Field(default_factory=dict)
+
+
+class LongitudinalTrace(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    case: Any
+    bundle_result: Optional[BundleResult] = None
+    execution_result: Optional[ExecutionResult] = None
+    bundle_refinements: Optional[int] = None
+    executor_refinements: Optional[int] = None
+    bundle_steps: Optional[list[VerticalStep]] = None
+    execution_steps: Optional[list[VerticalStep]] = None
+    qa_passed: Optional[bool] = None
+    executor_stable: Optional[bool] = None
+    errors: list[str] = Field(default_factory=list)
+
+
+class LongitudinalScore(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    score: float
+    traces: list[LongitudinalTrace] = Field(default_factory=list)
+
+
+ScoreFunction = Callable[..., float | LongitudinalScore | Mapping[str, Any]]
 
 
 class MPPLongitudinalRefiner(Teleprompter):
@@ -179,17 +245,21 @@ class MPPLongitudinalRefiner(Teleprompter):
 
     def __init__(
         self,
-        mutate_fn: MutateFn,
-        score_fn: ScoreFn,
+        mutate_function: MutateFunction,
+        score_function: ScoreFunction,
         *,
         max_iters: int = 5,
         maximize: bool = True,
     ) -> None:
         super().__init__()
-        self.mutate_fn = mutate_fn
-        self.score_fn = score_fn
+        self.mutate_function = mutate_function
+        self.score_function = score_function
         self.max_iters = max_iters
         self.maximize = maximize
+        self._score_accepts_blocks = self._score_function_accepts_blocks(score_function)
+        self._mutate_accepts_traces = self._mutate_function_accepts_traces(
+            mutate_function
+        )
 
     def refine(
         self,
@@ -198,30 +268,30 @@ class MPPLongitudinalRefiner(Teleprompter):
         *,
         initial_overrides: Mapping[str, str] | None = None,
     ) -> LongitudinalResult:
-        current_template = template
+        base_template = template
+        current_blocks = extract_mutable_blocks(base_template)
         if initial_overrides:
-            current_template = render_mutable_template(
-                current_template, initial_overrides
-            )
-        current_blocks = extract_mutable_blocks(current_template)
+            current_blocks = {**current_blocks, **initial_overrides}
         if not current_blocks:
             raise ValueError(
                 "No mutable blocks found. Add {{MPP_MUTABLE:...}} tokens to the "
                 "template before running longitudinal refinement."
             )
-        best_template = current_template
-        best_score = self.score_fn(best_template, dataset)
+        best_template = render_mutable_template(base_template, current_blocks)
+        best_score, current_traces = self._score(best_template, dataset, current_blocks)
         history = [
             LongitudinalStep(iteration=0, template=best_template, score=best_score)
         ]
+        best_blocks = dict(current_blocks)
 
         for i in range(1, self.max_iters + 1):
-            proposed_blocks = self.mutate_fn(current_blocks, dataset)
-            candidate_template = render_mutable_template(
-                current_template, proposed_blocks
+            proposed_blocks = self._mutate(current_blocks, dataset, current_traces)
+            merged_blocks = dict(current_blocks)
+            merged_blocks.update(proposed_blocks)
+            candidate_template = render_mutable_template(base_template, merged_blocks)
+            candidate_score, candidate_traces = self._score(
+                candidate_template, dataset, merged_blocks
             )
-            candidate_blocks = extract_mutable_blocks(candidate_template)
-            candidate_score = self.score_fn(candidate_template, dataset)
             history.append(
                 LongitudinalStep(
                     iteration=i,
@@ -233,14 +303,16 @@ class MPPLongitudinalRefiner(Teleprompter):
             if self._is_better(candidate_score, best_score):
                 best_score = candidate_score
                 best_template = candidate_template
-                current_template = candidate_template
-                current_blocks = candidate_blocks
+                current_blocks = merged_blocks
+                current_traces = candidate_traces
+                best_blocks = dict(merged_blocks)
 
         return LongitudinalResult(
             template=best_template,
             score=best_score,
             iterations=len(history) - 1,
             history=history,
+            blocks=best_blocks,
         )
 
     def compile(
@@ -252,6 +324,8 @@ class MPPLongitudinalRefiner(Teleprompter):
         valset=None,
         **kwargs,
     ):
+        if dspy is None:
+            raise ImportError("DSPy is required for compile().") from _DSPY_IMPORT_ERROR
         template = getattr(student, "template", None)
         if template is None:
             raise ValueError(
@@ -265,3 +339,55 @@ class MPPLongitudinalRefiner(Teleprompter):
 
     def _is_better(self, candidate: float, best: float) -> bool:
         return candidate > best if self.maximize else candidate < best
+
+    @staticmethod
+    def _score_function_accepts_blocks(score_function: ScoreFunction) -> bool:
+        try:
+            signature = inspect.signature(score_function)
+        except (TypeError, ValueError):
+            return False
+        for param in signature.parameters.values():
+            if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
+                return True
+        return len(signature.parameters) >= 3
+
+    @staticmethod
+    def _mutate_function_accepts_traces(
+        mutate_function: MutateFunction,
+    ) -> bool:
+        try:
+            signature = inspect.signature(mutate_function)
+        except (TypeError, ValueError):
+            return False
+        for param in signature.parameters.values():
+            if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
+                return True
+        return len(signature.parameters) >= 3
+
+    def _score(
+        self,
+        template: str,
+        dataset: Sequence[Any],
+        blocks: Mapping[str, str],
+    ) -> tuple[float, list[LongitudinalTrace]]:
+        if self._score_accepts_blocks:
+            result = self.score_function(template, dataset, blocks)
+        else:
+            result = self.score_function(template, dataset)
+        if isinstance(result, LongitudinalScore):
+            return float(result.score), list(result.traces)
+        if isinstance(result, Mapping) and "score" in result:
+            score = float(result["score"])
+            traces = result.get("traces") or []
+            return score, list(traces)
+        return float(result), []
+
+    def _mutate(
+        self,
+        blocks: Mapping[str, str],
+        dataset: Sequence[Any],
+        traces: Sequence[LongitudinalTrace] | None,
+    ) -> Mapping[str, str]:
+        if self._mutate_accepts_traces:
+            return self.mutate_function(blocks, dataset, traces)
+        return self.mutate_function(blocks, dataset)

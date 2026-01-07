@@ -135,6 +135,29 @@ def _normalize_response_for_stability(response: str) -> str:
     return " ".join(stripped.split())
 
 
+def _strip_reasoning_for_feedback(response: str) -> str:
+    text = response.strip()
+    if not text:
+        return text
+    stripped = _strip_code_fences(text)
+    for candidate in (stripped, text):
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        parsed = _drop_reasoning_fields(parsed)
+        return json.dumps(parsed, indent=2, ensure_ascii=True)
+    return response
+
+
+def _response_to_text(response: Any) -> str:
+    if isinstance(response, str):
+        return response
+    if isinstance(response, (dict, list)):
+        return json.dumps(response, indent=2, ensure_ascii=True)
+    return str(response)
+
+
 class MPPAdapterPipeline:
     """Two-stage adapter pipeline: architect -> derived spec -> executor."""
 
@@ -198,6 +221,7 @@ class MPPAdapterPipeline:
         bundle: Mapping[str, Any],
         max_iters: int | None = None,
         open_world: bool = False,
+        final_qa: bool = False,
         expect_reasoning: bool = False,
     ) -> ExecutionResult:
         max_iters = self.executor_max_iters if max_iters is None else max_iters
@@ -228,9 +252,7 @@ class MPPAdapterPipeline:
                     ],
                     derivative_protocol_payload=bundle["derivative_protocol_payload"],
                 )
-                response = _get_field(prediction, "final_response")
-                if not isinstance(response, str):
-                    response = str(response)
+                response = _response_to_text(_get_field(prediction, "final_response"))
                 reasoning = _extract_reasoning(prediction)
                 if expect_reasoning and reasoning is None:
                     raise ValueError(
@@ -251,7 +273,7 @@ class MPPAdapterPipeline:
                     qa_feedback = {
                         "verdict": qa_result.get("verdict"),
                         "issues": qa_result.get("issues"),
-                        "previous_response": response,
+                        "previous_response": _strip_reasoning_for_feedback(response),
                     }
 
                 steps.append(
@@ -276,6 +298,12 @@ class MPPAdapterPipeline:
 
         if not stable:
             final_response = last_response or ""
+
+        if not open_world and final_qa:
+            if self.qa is None:
+                raise ValueError("final_qa requires a QA predictor.")
+            qa_result = self._run_qa(bundle, final_response)
+            qa_passed = _qa_passed(qa_result)
 
         return ExecutionResult(
             final_response=final_response,
@@ -341,12 +369,14 @@ class MPPVerticalRefiner:
         bundle: Mapping[str, Any],
         max_iters: int | None = None,
         open_world: bool = False,
+        final_qa: bool = False,
         expect_reasoning: bool = False,
     ) -> ExecutionResult:
         return self.pipeline.execute(
             bundle,
             max_iters=max_iters,
             open_world=open_world,
+            final_qa=final_qa,
             expect_reasoning=expect_reasoning,
         )
 

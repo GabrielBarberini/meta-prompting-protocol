@@ -10,7 +10,7 @@ class ProtocolArchitect(dspy.Signature):
 
     user_goal: str = dspy.InputField(desc="High-level user goal to be encoded.")
     meta_protocol_version: str = dspy.OutputField(
-        desc="MPP spec version (e.g., 1.2.0)."
+        desc="MPP spec version (e.g., 1.3.0)."
     )
     derivative_protocol_specification: dict[str, Any] = dspy.OutputField(
         desc="Derivative protocol specification object."
