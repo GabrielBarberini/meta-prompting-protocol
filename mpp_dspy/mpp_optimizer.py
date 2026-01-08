@@ -44,9 +44,8 @@ def _refined_goal(
     previous_bundle: Optional[Mapping[str, Any]],
     error_message: Optional[str] = None,
 ) -> str:
-    if previous_bundle is None and error_message is None:
-        return user_goal
-    parts = [user_goal]
+    raw_goal = f"<RAW_USER_GOAL>\n{user_goal}\n</RAW_USER_GOAL>"
+    parts = [raw_goal]
     if previous_bundle is not None:
         parts.append(
             "Previous bundle:\n"
@@ -221,6 +220,7 @@ class LongitudinalTrace(BaseModel):
     case: Any
     bundle_result: Optional[BundleResult] = None
     execution_result: Optional[ExecutionResult] = None
+    bundle_stable: Optional[bool] = None
     bundle_refinements: Optional[int] = None
     executor_refinements: Optional[int] = None
     bundle_steps: Optional[list[VerticalStep]] = None

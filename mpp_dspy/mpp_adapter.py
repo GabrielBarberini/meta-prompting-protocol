@@ -60,10 +60,11 @@ def _get_field(prediction: Any, name: str) -> Any:
 
 
 def _refined_goal(user_goal: str, previous_bundle: Optional[Mapping[str, Any]]) -> str:
+    raw_goal = f"<RAW_USER_GOAL>\n{user_goal}\n</RAW_USER_GOAL>"
     if previous_bundle is None:
-        return user_goal
+        return raw_goal
     return (
-        f"{user_goal}\n\nPrevious bundle:\n"
+        f"{raw_goal}\n\nPrevious bundle:\n"
         f"{json.dumps(previous_bundle, indent=2, ensure_ascii=True)}\n"
         "Refine for stability and correctness. If the previous bundle is valid, "
         "return it verbatim."

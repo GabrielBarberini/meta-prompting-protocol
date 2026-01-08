@@ -20,6 +20,9 @@ MPP introduces a two-stage workflow with two key agents:
 1.  **The Protocol Architect:** An AI that analyzes a user's goal and generates a **bespoke Derivative Protocol** (like a custom API) perfectly suited for transmiting the task.
 2.  **The Executor:** An AI that receives a bundle containing both the **newly generated protocol** and a **payload** encoded according to that protocol. It learns the rules just-in-time and executes the task with precision.
 
+Note: the Architect is instructed to preserve the raw user goal verbatim in the
+payload’s primary instruction tag to avoid accidental drift during refinement.
+
 This makes every prompt a self-contained structured package, reducing ambiguity and helping Executors know *exactly* what is required.
 
 ### How It Works: A Quick Look
@@ -106,17 +109,32 @@ Always output JSON.
 ```
 
 Recommended mutable blocks:
-`entry_prompt`, `architect_primer`, `executor_primer`, `strategy_payload`, plus
-protocol content (tag sets, schema keys, processor names, payload fields). Only
-the MPP spec text itself and the required bundle structure/order stay immutable.
+`architect_primer`, `executor_primer`, `strategy_payload`, plus protocol content
+(tag sets, schema keys, processor names, payload fields). Keep the entry prompt
+fixed to avoid mutating the user goal or intent. Only the MPP spec text itself
+and the required bundle structure/order stay immutable.
 
 Refinement runs in two distinct loops:
 - Longitudinal loop (TextGrad or other optimizers) mutates the allowed text
   segments to improve overall fit across a dataset.
 - Vertical loop (monadic refinement) iterates per request to stabilize a single
   bundle/execution with validation/QA feedback.
+
+```mermaid
+flowchart LR
+  D[Dataset Cases] --> V[MPPAutoAdapter<br/>(Vertical Loop)]
+  T[Template Blocks] --> V
+  V --> S[Trace Score]
+  S --> M[Mutate Template Blocks]
+  M --> T
+```
+
 Longitudinal scoring is pluggable: implement `LongitudinalMetric` to replace the
 default trace-cost metric used by `MPPFullPipeline`.
+The default `TraceCostMetric` uses a dominant final-response weight and doubles
+weights as you move outward (defaults: final=4, architect=2, executor=1).
+Override `final_weight` to scale the set or pass explicit weights. If the
+bundle/executor fails to stabilize or QA fails, the case score is 0.
 
 ##### Bilevel Optimization (Why both loops matter)
 You can view MPP as a bilevel system:
@@ -128,8 +146,8 @@ You can view MPP as a bilevel system:
 Important: do not score longitudinal updates solely on the final answer.
 If the vertical loop "fixes" errors, the prompt can look perfect while still
 being expensive. Instead, score the trace cost (iteration counts, QA failures,
-validation errors) and feed intermediate error traces to the optimizer. The
-goal is not just convergence, but faster convergence.
+validation errors). If a bundle or executor never stabilizes, treat it as max
+loss and move on. The goal is not just convergence, but faster convergence.
 
 ##### Raw
 Download the [MPP Specification](docs/meta_prompting_protocol_spec.md) and attach it to an AI model session. Frame the AI as a "Protocol Architect" or "Executor" and start generating or executing MPP bundles.

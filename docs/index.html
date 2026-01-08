@@ -109,7 +109,21 @@
                 </p>
             </div>
             <div class="mt-12 flex flex-col items-center gap-8">
-                <img src="assets/dspy-adapter-flow.svg" alt="DSPy adapter flow for MPP" class="w-full max-w-5xl shadow-sm border border-slate-200 rounded-lg bg-white p-4" />
+                <img src="assets/dspy-adapter-flow.svg" alt="MPP refinement loops diagram" class="w-full max-w-5xl shadow-sm border border-slate-200 rounded-lg bg-white p-4" />
+                <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm w-full max-w-3xl text-left">
+                    <p class="text-sm font-semibold text-slate-600">Longitudinal refinement</p>
+                    <p class="mt-3 text-sm text-slate-600">
+                        The longitudinal loop wraps the vertical pipeline, scoring trace costs and mutating
+                        template blocks to reduce convergence friction over time.
+                    </p>
+                </div>
+                <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm w-full max-w-3xl text-left">
+                    <p class="text-sm font-semibold text-slate-600">Vertical refinement</p>
+                    <p class="mt-3 text-sm text-slate-600">
+                        The vertical loop handles a single request, iterating bundle + executor refinement
+                        until outputs stabilize and QA passes.
+                    </p>
+                </div>
                 <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm w-full max-w-3xl text-left">
                     <p class="text-sm font-semibold text-slate-600">Example</p>
                     <pre class="mt-3 text-sm text-slate-800 overflow-x-auto"><code>import dspy

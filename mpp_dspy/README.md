@@ -52,6 +52,10 @@ Notes:
   with `traces` from `score_function` to expose iteration counts and QA errors.
 - `MPPFullPipeline` accepts a `metric` implementing `LongitudinalMetric` so you
   can replace the default trace-cost scoring with your own evaluator.
+- `TraceCostMetric` uses a dominant final-response weight and doubles weights
+  as you move outward (defaults: final=4, architect=2, executor=1). Override
+  `final_weight` to scale the set or pass explicit weights. If the
+  bundle/executor fails to stabilize or QA fails, the case score is 0.
 - Vertical refinement returns per-iteration telemetry in `steps` on
   `BundleResult` and `ExecutionResult` (includes outputs plus QA/errors).
 - For symmetry with longitudinal refinement, `MPPVerticalRefiner` wraps the

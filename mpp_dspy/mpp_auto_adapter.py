@@ -353,6 +353,7 @@ class MPPFullPipeline:
                         executor_refinements=executor_refinements,
                         bundle_steps=getattr(result, "bundle_steps", None),
                         execution_steps=getattr(result, "executor_steps", None),
+                        bundle_stable=getattr(result, "bundle_stable", None),
                         qa_passed=result.qa_passed,
                         executor_stable=result.executor_stable,
                     )
