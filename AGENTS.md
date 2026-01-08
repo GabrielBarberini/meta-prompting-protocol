@@ -14,16 +14,17 @@ organized by test type. Repo-level docs and configuration are in `README.md`,
 - `make test`: run the pytest suite in `tests/`.
 
 ## Coding Style & Naming Conventions
-Python formatting follows Black with a line length of 88 and target version
-Python 3.9. Ruff enforces E/F/I checks, so keep imports sorted and unused
-symbols removed. Use snake_case for modules/functions, PascalCase for classes,
-and UPPER_SNAKE_CASE for constants.
+- Python: 4-space indentation, type hints on public APIs, no wildcard imports.
+- Naming: `snake_case` for functions/modules, `PascalCase` for classes, `UPPER_SNAKE_CASE` for constants.
+- Keep code slim: avoid inline comments and verbose model metadata unless it reduces cognitive load or improves generated docs.
+- Prefer structural pattern matching (`match`/destructuring, including Pydantic models) for parsing and branching when it clarifies intent and the target Python version allows it.
+- Prefer explicit config over hidden defaults; validate at the boundary.
+- Formatting: run Black (line length 88) and Ruff (E/F/I) on changed code.
 
 ## Testing Guidelines
-Tests live under `tests/` with `unit/` and `integration/` folders plus shared
-fixtures in `tests/fixtures/`. Follow the AAA pattern, use `test_methodname_*`
-naming, and include a brief docstring describing the expected behavior in each
-test.
+- Use `pytest`; name files `test_*.py`.
+- Unit tests must not call external services; mock LLM/HTTP requests.
+- Keep fixtures in `tests/fixtures/` when shared across suites.
 
 ## Commit & Pull Request Guidelines
 Commit messages in history are short and imperative, often sentence case or
