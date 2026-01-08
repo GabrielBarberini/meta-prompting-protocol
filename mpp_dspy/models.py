@@ -17,6 +17,7 @@ class DerivativeProtocolSpecification(BaseModel):
     protocol_version: str | None = None
     payload_order: list[str] | None = None
     processor_pipeline: list[str] | None = None
+    mcp_tooling: dict[str, Any] | None = None
 
 
 class MPPBundle(BaseModel):

@@ -94,7 +94,7 @@
                 <div class="flow-card bg-white p-6 rounded-lg shadow-lg border-2 border-dashed border-slate-300 max-w-2xl w-full">
                     <div class="text-3xl">🧐</div>
                     <h3 class="text-2xl font-bold text-slate-800 mt-4">4. The Quality Assurance Agent <span class="text-base font-medium text-slate-500">(Optional)</span></h3>
-                    <p class="mt-4 text-slate-600">A third AI agent validates the Executor's output against the original user's intent, using the structured data in the bundle to ensure high fidelity and correctness.</p>
+                <p class="mt-4 text-slate-600">A third AI agent validates the Executor's output against the original user's intent, using the structured data in the bundle to ensure high fidelity and correctness. If the protocol defines MCP tooling, the Executor may run those tool calls before the final response.</p>
                 </div>
 
             </div>
@@ -104,8 +104,8 @@
             <div class="text-center">
                 <h2 class="text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">DSPy Adapter Interface</h2>
                 <p class="mt-4 max-w-3xl mx-auto text-lg text-slate-600">
-                    MPP can also be consumed as a DSPy module. MPPAutoAdapter wraps the two-stage adapter flow and runs
-                    bundle refinement internally, while selecting the QA-augmented loop for open-world tasks.
+                    MPP can be consumed as a DSPy module (MPPAutoAdapter) and optimized via a DSPy teleprompter
+                    (MPPAutoAdapterOptimizer) to tune the longitudinal template before running the vertical loop.
                 </p>
             </div>
             <div class="mt-12 flex flex-col items-center gap-8">
@@ -125,7 +125,7 @@
                     </p>
                 </div>
                 <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm w-full max-w-3xl text-left">
-                    <p class="text-sm font-semibold text-slate-600">Example</p>
+                    <p class="text-sm font-semibold text-slate-600">Example: vertical only</p>
                     <pre class="mt-3 text-sm text-slate-800 overflow-x-auto"><code>import dspy
 from mpp_dspy import MPPAutoAdapter
 
@@ -134,6 +134,28 @@ dspy.settings.configure(lm=lm)
 
 program = MPPAutoAdapter()
 result = program(user_goal="Draft a crisp product launch email.", open_world=True)
+print(result.final_response)</code></pre>
+                </div>
+                <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm w-full max-w-3xl text-left">
+                    <p class="text-sm font-semibold text-slate-600">Example: longitudinal + vertical</p>
+                    <pre class="mt-3 text-sm text-slate-800 overflow-x-auto"><code>import dspy
+from mpp_dspy import DefaultLongitudinalMutator, MPPAutoAdapter, MPPAutoAdapterOptimizer
+
+lm = dspy.OpenAI(model="gpt-4o-mini")
+dspy.settings.configure(lm=lm)
+
+template = """[ENTRY_PROMPT]
+{{MPP_MUTABLE:entry_prompt}}...{{/MPP_MUTABLE}}
+"""
+case = {"user_goal": "Produce a risk checklist.", "open_world": True}
+
+program = MPPAutoAdapter()
+optimizer = MPPAutoAdapterOptimizer(
+    template=template,
+    mutate_function=DefaultLongitudinalMutator(lm),
+)
+optimized = optimizer.compile(program, trainset=case)
+result = optimized(user_goal="Draft a crisp product launch email.", open_world=True)
 print(result.final_response)</code></pre>
                 </div>
             </div>

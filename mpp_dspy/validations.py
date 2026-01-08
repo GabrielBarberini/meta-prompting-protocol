@@ -22,6 +22,7 @@ ALLOWED_SPEC_FIELDS = set(REQUIRED_SPEC_FIELDS) | {
     "protocol_version",
     "payload_order",
     "processor_pipeline",
+    "mcp_tooling",
 }
 
 
@@ -196,6 +197,10 @@ def validate_payload(spec: Mapping[str, Any], payload: Mapping[str, Any]) -> Non
         ):
             raise ValueError("processor_pipeline order does not match payload order")
 
+    mcp_tooling = spec.get("mcp_tooling")
+    if mcp_tooling is not None:
+        _validate_mcp_tooling(mcp_tooling)
+
     missing_required = []
     for tag, tag_def in core_tag_library.items():
         if tag in payload:
@@ -221,6 +226,50 @@ def _require_mapping(value: Any, label: str) -> Mapping[str, Any]:
             return parsed
         raise TypeError(f"{label} must be a mapping")
     raise TypeError(f"{label} must be a mapping")
+
+
+def _validate_mcp_tooling(tooling: Any) -> None:
+    tooling_map = _require_mapping(
+        tooling, "derivative_protocol_specification.mcp_tooling"
+    )
+    tools = tooling_map.get("tools")
+    if tools is None or not isinstance(tools, Sequence) or isinstance(tools, str):
+        raise TypeError("mcp_tooling.tools must be an array of tool definitions")
+
+    tool_names: list[str] = []
+    for idx, tool in enumerate(tools):
+        tool_map = _require_mapping(tool, f"mcp_tooling.tools[{idx}]")
+        name = tool_map.get("name")
+        if not isinstance(name, str) or not name:
+            raise TypeError("mcp_tooling.tools[].name must be a non-empty string")
+        tool_names.append(name)
+        if "input_schema" in tool_map and not isinstance(
+            tool_map["input_schema"], Mapping
+        ):
+            raise TypeError("mcp_tooling.tools[].input_schema must be a mapping")
+        if "output_schema" in tool_map and not isinstance(
+            tool_map["output_schema"], Mapping
+        ):
+            raise TypeError("mcp_tooling.tools[].output_schema must be a mapping")
+
+    call_order = tooling_map.get("call_order")
+    if call_order is not None:
+        if not isinstance(call_order, Sequence) or isinstance(call_order, str):
+            raise TypeError("mcp_tooling.call_order must be an array")
+        for idx, step in enumerate(call_order):
+            if isinstance(step, str):
+                tool_name = step
+            else:
+                step_map = _require_mapping(step, f"mcp_tooling.call_order[{idx}]")
+                tool_name = step_map.get("tool")
+                if not isinstance(tool_name, str) or not tool_name:
+                    raise TypeError(
+                        "mcp_tooling.call_order[].tool must be a non-empty string"
+                    )
+            if tool_name not in tool_names:
+                raise ValueError(
+                    "mcp_tooling.call_order references undefined tool: " f"{tool_name}"
+                )
 
 
 def _require_keys(

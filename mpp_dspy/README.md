@@ -46,12 +46,21 @@ Notes:
 - The refinement loops mirror the monadic polishing approach: propose -> validate
   -> refine until the bundle/output stabilizes.
 - Longitudinal refinement (TextGrad-style) can be run separately over templates
-  with `{{MPP_MUTABLE:...}}` tokens to optimize prompt segments across datasets.
-- `MPPLongitudinalRefiner` can pass vertical traces back into your
-  `mutate_function` if it accepts a third argument. Return a `LongitudinalScore`
-  with `traces` from `score_function` to expose iteration counts and QA errors.
-- `MPPFullPipeline` accepts a `metric` implementing `LongitudinalMetric` so you
-  can replace the default trace-cost scoring with your own evaluator.
+  with `{{MPP_MUTABLE:...}}` tokens to optimize prompt segments for a case.
+- `MPPAutoAdapterOptimizer` is a DSPy teleprompter: call `compile()` with a base
+  `MPPAutoAdapter` and a single case (mapping or object with `user_goal` /
+  `open_world`) to get an optimized module. It accepts a `metric` implementing
+  `LongitudinalMetric` so you can replace the default trace-cost scoring.
+- `MPPLongitudinalRefiner` is the generic teleprompter used internally by
+  `MPPAutoAdapterOptimizer`. Use it directly when you want a custom
+  `score_function` or to optimize non-MPPAutoAdapter templates. The
+  `mutate_function` may accept traces and history (optional); if you accept them,
+  you can use `LongitudinalScore` + `traces` to surface iteration counts and QA
+  errors.
+- `DefaultLongitudinalMutator` ships with MPP: it preserves `entry_prompt` and
+  only mutates `strategy_payload`, `architect_primer`, and `executor_primer`.
+- `mcp_tooling` (optional spec field) lets the Architect declare tool schemas
+  and call order when the Executor must run MCP tools before responding.
 - `TraceCostMetric` uses a dominant final-response weight and doubles weights
   as you move outward (defaults: final=4, architect=2, executor=1). Override
   `final_weight` to scale the set or pass explicit weights. If the
@@ -66,9 +75,9 @@ Notes:
 - `MPPAutoAdapter` also accepts `architect_lm`, `executor_lm`, and `qa_lm` so
   each stage can use a different LM (or temperature/RAG wrapper) while still
   sharing the same adapters.
-- `MPPFullPipeline` runs longitudinal optimization around the vertical loops,
-  so each longitudinal step evaluates full MPP executions before selecting the
-  best template blocks.
+- `MPPAutoAdapterOptimizer` runs longitudinal optimization around the vertical
+  loops, so each longitudinal step evaluates full MPP executions before
+  selecting the best template blocks.
 - If the executor uses `dspy.ChainOfThought`, `ExecutionResult.reasoning` is
   populated and the loop enforces that reasoning is returned.
 - Closed-world tasks: use stability checks as convergence and run QA once at the
@@ -106,6 +115,9 @@ print(result.final_response)
 
 If you pass a `dspy.ChainOfThought` executor into `MPPAutoAdapter`, the result
 includes `executor_reasoning`.
+
+See the repository `README.md` for longitudinal optimizer examples and parallel
+candidate guidance.
 
 ## Client Interface
 

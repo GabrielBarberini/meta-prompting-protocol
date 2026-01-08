@@ -1,7 +1,7 @@
 # MPP: Meta-Prompting Protocol
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/MPP-v1.3.0-blue)](docs/meta_prompting_protocol_spec.md)
+[![Version](https://img.shields.io/badge/MPP-v1.4.0-blue)](docs/meta_prompting_protocol_spec.md)
 [![Website](https://camo.githubusercontent.com/e49e99e37f7d3db64fc81400ce926d621dd38746c68b678a10c54331835832fe/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f50726f6a6563742d576562736974652d677265656e)](https://gabrielbarberini.github.io/meta-prompting-protocol/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/GabrielBarberini/meta-prompting-protocol)
 
@@ -69,6 +69,7 @@ flowchart LR
 
 ##### DSPy
 If you are using DSPy, `MPPAutoAdapter` wraps the full MPP workflow as a single module.
+Example: vertical-only refinement.
 
 ```python
 import dspy
@@ -89,9 +90,33 @@ print(result.final_response)
 To plug in a custom provider, supply any DSPy-compatible LM to
 `dspy.settings.configure`. See `mpp_dspy/README.md` for notes.
 
-For a full longitudinal+vertical pipeline, use `MPPFullPipeline` with a
-longitudinal template and mutation strategy, then run vertical refinement on the
-optimized blocks (see `mpp_dspy/README.md`).
+For a full longitudinal+vertical pipeline, use `MPPAutoAdapterOptimizer` as a
+DSPy teleprompter to compile an optimized `MPPAutoAdapter` for a single case
+(see `mpp_dspy/README.md`). Example: longitudinal + vertical refinement.
+
+```python
+import dspy
+
+from mpp_dspy import DefaultLongitudinalMutator, MPPAutoAdapter, MPPAutoAdapterOptimizer
+
+lm = dspy.OpenAI(model="gpt-4o-mini")
+dspy.settings.configure(lm=lm)
+
+case = {"user_goal": "Produce a structured risk checklist.", "open_world": True}
+
+program = MPPAutoAdapter()
+optimizer = MPPAutoAdapterOptimizer(
+  template=YOUR_TEMPLATE,
+  mutate_function=DefaultLongitudinalMutator(lm),
+)
+optimized = optimizer.compile(program, trainset=case)
+result = optimized(user_goal="Draft a crisp launch email.", open_world=True)
+print(result.final_response)
+```
+
+If you want parallel candidates, run multiple `MPPAutoAdapterOptimizer` instances
+in parallel; each run is a full pipeline for a single case. Compare
+`optimized.longitudinal_result.score` to pick the best.
 
 ##### TextGrad-ready templates (optional)
 If you apply TextGrad or any prompt optimizer, keep the MPP structure intact and
@@ -116,9 +141,10 @@ and the required bundle structure/order stay immutable.
 
 Refinement runs in two distinct loops:
 - Longitudinal loop (TextGrad or other optimizers) mutates the allowed text
-  segments to improve overall fit across a dataset.
+  segments to improve fit for a case (run multiple cases separately if needed).
 - Vertical loop (monadic refinement) iterates per request to stabilize a single
   bundle/execution with validation/QA feedback.
+See `FLOW_OF_INFORMATION.md` for a step-by-step data flow breakdown.
 
 ```mermaid
 flowchart LR
@@ -130,17 +156,36 @@ flowchart LR
 ```
 
 Longitudinal scoring is pluggable: implement `LongitudinalMetric` to replace the
-default trace-cost metric used by `MPPFullPipeline`.
+default trace-cost metric used by `MPPAutoAdapterOptimizer`.
 The default `TraceCostMetric` uses a dominant final-response weight and doubles
 weights as you move outward (defaults: final=4, architect=2, executor=1).
 Override `final_weight` to scale the set or pass explicit weights. If the
 bundle/executor fails to stabilize or QA fails, the case score is 0.
 
+##### Customization Interfaces
+Modular pieces you can swap without changing the core flow:
+- `DefaultLongitudinalMutator`: default mutation policy (keeps `entry_prompt`
+  fixed; mutates `strategy_payload`, `architect_primer`, `executor_primer`).
+- `LongitudinalMetric`: scoring interface (default `TraceCostMetric`).
+- `mutate_function`: mutation hook used by `MPPAutoAdapterOptimizer` and
+  `MPPLongitudinalRefiner`.
+- `MPPLongitudinalRefiner`: lower-level teleprompter if you want a custom
+  `score_function` instead of `LongitudinalMetric`.
+- `architect_lm` / `executor_lm` / `qa_lm`: per-stage model selection.
+- `architect_role_instructions` / `executor_role_instructions` / `qa_role_instructions`:
+  custom role primers.
+- `scripts/mpp_e2e_template.py`: provider-agnostic template to run
+  MPPAutoAdapterOptimizer end-to-end and save the best adapter template locally.
+- `mcp_tooling` (optional spec field): declare MCP tool schemas and call order
+  when Executors must perform tool calls before final response.
+- `MPPAutoAdapterOptimizer`: DSPy teleprompter that searches for the best
+  MPPAutoAdapter framing for a single case while preserving the MPP spec.
+
 ##### Bilevel Optimization (Why both loops matter)
 You can view MPP as a bilevel system:
 - **Inner (vertical) loop:** guarantees correctness for a single request, but
   can be costly if it needs multiple retries.
-- **Outer (longitudinal) loop:** tunes prompts across a dataset to reduce that
+- **Outer (longitudinal) loop:** tunes prompts for a case to reduce that
   inner-loop cost over time.
 
 Important: do not score longitudinal updates solely on the final answer.
@@ -173,7 +218,7 @@ Derivate an appropriate protocol and build a MPP bundle encoding the following p
 And it would respond with a complete MPP bundle ready for an Executor to process e.g
 ```json
 {
-  "meta_protocol_version": "1.3.0",
+  "meta_protocol_version": "1.4.0",
   "derivative_protocol_specification": {
     "protocol_name": "Constrained Persona Protocol (CPP)",
     "protocol_version": "1.0",

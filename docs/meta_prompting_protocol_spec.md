@@ -1,6 +1,6 @@
 # **Meta-Prompting Protocol Specification (MPP)**
 
-Version 1.3.0
+Version 1.4.0
 
 ## **1. Abstract**
 
@@ -55,7 +55,7 @@ An MPP-compliant bundle MUST be a JSON object containing the following three top
   
 ```json
 {  
-  "meta_protocol_version": "1.3.0",  
+  "meta_protocol_version": "1.4.0",  
   "derivative_protocol_specification": { ... },  
   "derivative_protocol_payload": { ... }  
 }
@@ -84,8 +84,8 @@ To be MPP-compliant, the derivative_protocol_specification object MUST contain t
 * **`processor_semantics`** (Object): A dictionary describing the expected behavior of each processor mentioned in the tag library.  
 * **`core_tag_library`**: The dictionary of all valid tags for this protocol, defined according to the `tag_definition_schema`.
 
-No additional top-level keys are allowed beyond the mandatory components and the
-optional ordered metadata defined in 5.2.
+No additional top-level keys are allowed beyond the mandatory components, the
+optional ordered metadata defined in 5.2, and the tooling section defined in 5.5.
 
 ### **5.1. Processor Semantics**
 A processor is a named function or instruction that defines the specific behavior the Executor agent must apply to the data contained within a tag. Each key in this section represents a processor, and its value describes the action it performs.
@@ -140,6 +140,25 @@ Acceptable strategy labels (from https://www.promptingguide.ai/techniques) are:
 `program_aided_language_models`, `react`, `reflexion`, `multimodal_cot`,
 `graph_prompting`.
 
+### **5.5 MCP Tooling (Optional)**
+Derivative protocols MAY declare an MCP tooling plan when the Executor must call
+tools in a prescribed order before final response. This is expressed via an
+`mcp_tooling` object:
+
+* **`mcp_tooling.tools`** (Array of Objects, Required when `mcp_tooling` is present):
+  Each tool definition SHOULD include `name` (string), `description` (string),
+  and MAY include `input_schema` / `output_schema` JSON schemas.
+* **`mcp_tooling.call_order`** (Array, Optional): Ordered list of tool steps.
+  Each step is either a tool name string or an object with `tool` and optional
+  metadata like `purpose` or `required`. Executors SHOULD execute tools in this
+  order when provided.
+* **`mcp_tooling.execution_policy`** (Object, Optional): Execution constraints
+  such as `max_calls`, `require_all`, or `on_failure`.
+
+When `mcp_tooling` is present, derivative protocols SHOULD include payload tags
+for tool inputs or tool plans (for example, `$tool_plan`, `$tool_inputs`, or
+`$tool_outputs`) and order them with `payload_order` if sequencing matters.
+
 ## **6. Example Walkthrough: A Creative Writing Task**
 
 This example demonstrates the entire MPP flow.
@@ -154,7 +173,7 @@ This example demonstrates the entire MPP flow.
 
 ```json
 {  
-  "meta_protocol_version": "1.3.0",  
+  "meta_protocol_version": "1.4.0",  
   "derivative_protocol_specification": {  
     "protocol_name": "Creative Writing Protocol (CWP)",  
     "protocol_version": "1.0",

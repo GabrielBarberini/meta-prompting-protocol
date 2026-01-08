@@ -260,15 +260,19 @@ class MPPLongitudinalRefiner(Teleprompter):
         self._mutate_accepts_traces = self._mutate_function_accepts_traces(
             mutate_function
         )
+        self._mutate_accepts_history = self._mutate_function_accepts_history(
+            mutate_function
+        )
 
     def refine(
         self,
         template: str,
-        dataset: Sequence[Any],
+        dataset: Sequence[Any] | Any,
         *,
         initial_overrides: Mapping[str, str] | None = None,
     ) -> LongitudinalResult:
         base_template = template
+        dataset_list = self._normalize_dataset(dataset)
         current_blocks = extract_mutable_blocks(base_template)
         if initial_overrides:
             current_blocks = {**current_blocks, **initial_overrides}
@@ -278,19 +282,26 @@ class MPPLongitudinalRefiner(Teleprompter):
                 "template before running longitudinal refinement."
             )
         best_template = render_mutable_template(base_template, current_blocks)
-        best_score, current_traces = self._score(best_template, dataset, current_blocks)
+        best_score, current_traces = self._score(
+            best_template, dataset_list, current_blocks
+        )
         history = [
             LongitudinalStep(iteration=0, template=best_template, score=best_score)
         ]
         best_blocks = dict(current_blocks)
 
         for i in range(1, self.max_iters + 1):
-            proposed_blocks = self._mutate(current_blocks, dataset, current_traces)
+            proposed_blocks = self._mutate(
+                current_blocks,
+                dataset_list,
+                current_traces,
+                history,
+            )
             merged_blocks = dict(current_blocks)
             merged_blocks.update(proposed_blocks)
             candidate_template = render_mutable_template(base_template, merged_blocks)
             candidate_score, candidate_traces = self._score(
-                candidate_template, dataset, merged_blocks
+                candidate_template, dataset_list, merged_blocks
             )
             history.append(
                 LongitudinalStep(
@@ -314,6 +325,14 @@ class MPPLongitudinalRefiner(Teleprompter):
             history=history,
             blocks=best_blocks,
         )
+
+    @staticmethod
+    def _normalize_dataset(dataset: Sequence[Any] | Any) -> list[Any]:
+        if isinstance(dataset, Mapping):
+            return [dataset]
+        if isinstance(dataset, Sequence) and not isinstance(dataset, (str, bytes)):
+            return list(dataset)
+        return [dataset]
 
     def compile(
         self,
@@ -364,6 +383,19 @@ class MPPLongitudinalRefiner(Teleprompter):
                 return True
         return len(signature.parameters) >= 3
 
+    @staticmethod
+    def _mutate_function_accepts_history(
+        mutate_function: MutateFunction,
+    ) -> bool:
+        try:
+            signature = inspect.signature(mutate_function)
+        except (TypeError, ValueError):
+            return False
+        for param in signature.parameters.values():
+            if param.kind in (param.VAR_POSITIONAL, param.VAR_KEYWORD):
+                return True
+        return len(signature.parameters) >= 4
+
     def _score(
         self,
         template: str,
@@ -387,7 +419,10 @@ class MPPLongitudinalRefiner(Teleprompter):
         blocks: Mapping[str, str],
         dataset: Sequence[Any],
         traces: Sequence[LongitudinalTrace] | None,
+        history: Sequence[LongitudinalStep],
     ) -> Mapping[str, str]:
+        if self._mutate_accepts_history:
+            return self.mutate_function(blocks, dataset, traces, history)
         if self._mutate_accepts_traces:
             return self.mutate_function(blocks, dataset, traces)
         return self.mutate_function(blocks, dataset)

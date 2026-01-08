@@ -15,6 +15,7 @@ from .mpp_optimizer import (
     LongitudinalTrace,
     MPPLongitudinalRefiner,
 )
+from .mutations import DefaultLongitudinalMutator
 from .template_tokens import (
     extract_mutable_blocks,
     list_mutable_blocks,
@@ -26,9 +27,8 @@ try:
     from .dspy_adapters import MPPArchitectAdapter, MPPExecutorAdapter, MPPQAAdapter
     from .mpp_auto_adapter import (
         FullPipelineResult,
-        LongitudinalCase,
         MPPAutoAdapter,
-        MPPFullPipeline,
+        MPPAutoAdapterOptimizer,
     )
     from .mpp_signatures import ProtocolArchitect, ProtocolExecutor, QualityAssurance
 except Exception as exc:
@@ -48,9 +48,8 @@ except Exception as exc:
     MPPExecutorAdapter = _DSPyMissing
     MPPQAAdapter = _DSPyMissing
     MPPAutoAdapter = _DSPyMissing
-    MPPFullPipeline = _DSPyMissing
+    MPPAutoAdapterOptimizer = _DSPyMissing
     FullPipelineResult = _DSPyMissing
-    LongitudinalCase = _DSPyMissing
 
 __all__ = [
     "DerivativeProtocolSpecification",
@@ -65,9 +64,8 @@ __all__ = [
     "MPPExecutorAdapter",
     "MPPQAAdapter",
     "MPPAutoAdapter",
-    "MPPFullPipeline",
+    "MPPAutoAdapterOptimizer",
     "FullPipelineResult",
-    "LongitudinalCase",
     "BundleResult",
     "ExecutionResult",
     "MPPAdapterPipeline",
@@ -84,4 +82,5 @@ __all__ = [
     "MPPLongitudinalRefiner",
     "LongitudinalMetric",
     "TraceCostMetric",
+    "DefaultLongitudinalMutator",
 ]

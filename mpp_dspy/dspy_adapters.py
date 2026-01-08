@@ -8,7 +8,7 @@ from dspy.adapters.json_adapter import JSONAdapter
 from dspy.signatures.signature import Signature
 
 _ARCHITECT_PRIMER = (
-    "You are a Protocol Architect.\n"
+    "You are the MPP Architect.\n"
     "- Follow the MPP specification strictly.\n"
     "- Derive a task-specific derivative protocol (schema, tags, processors).\n"
     "- Encode the user goal into the payload using the derived protocol.\n"
@@ -22,7 +22,7 @@ _ARCHITECT_PRIMER = (
 )
 
 _EXECUTOR_PRIMER = (
-    "You are an Executor.\n"
+    "You are the MPP Executor.\n"
     "- Follow the MPP specification strictly.\n"
     "- Parse the derivative_protocol_specification to learn tags and processors.\n"
     "- Decode the payload accordingly and generate the final response.\n"
@@ -30,7 +30,7 @@ _EXECUTOR_PRIMER = (
 )
 
 _QA_PRIMER = (
-    "You are a QA agent.\n"
+    "You are an MPP QA agent.\n"
     "- Follow the MPP specification strictly.\n"
     "- Validate the executor response against the bundle constraints.\n"
     "- Return a JSON object with 'verdict' and 'issues' only.\n"
@@ -63,16 +63,20 @@ class MPPBaseAdapter(JSONAdapter):
         spec_text: str | None = None,
         spec_path: str | Path | None = None,
         role_instructions: str | None = None,
+        base_role_instructions: str | None = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.spec_text = _load_spec_text(spec_text, spec_path)
+        self.base_role_instructions = (base_role_instructions or "").strip()
         self.role_instructions = (role_instructions or "").strip()
 
     def format_task_description(self, signature: type[Signature]) -> str:
         parts = []
         if self.spec_text:
             parts.append(f"MPP specification:\n{self.spec_text}")
+        if self.base_role_instructions:
+            parts.append(self.base_role_instructions)
         if self.role_instructions:
             parts.append(self.role_instructions)
         if signature.instructions:
@@ -87,13 +91,19 @@ class MPPArchitectAdapter(MPPBaseAdapter):
         expect_reasoning: bool = False,
         **kwargs,
     ) -> None:
-        role_instructions = kwargs.pop("role_instructions", _ARCHITECT_PRIMER)
+        role_instructions = kwargs.pop("role_instructions", "")
+        base_role_instructions = kwargs.pop("base_role_instructions", _ARCHITECT_PRIMER)
         if expect_reasoning:
             role_instructions = (
                 f"{role_instructions}\n"
                 "- If a reasoning field is required, provide chain-of-thought in it."
             )
-        super().__init__(*args, role_instructions=role_instructions, **kwargs)
+        super().__init__(
+            *args,
+            role_instructions=role_instructions,
+            base_role_instructions=base_role_instructions,
+            **kwargs,
+        )
 
 
 class MPPExecutorAdapter(MPPBaseAdapter):
@@ -105,13 +115,19 @@ class MPPExecutorAdapter(MPPBaseAdapter):
         qa_feedback: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
-        role_instructions = kwargs.pop("role_instructions", _EXECUTOR_PRIMER)
+        role_instructions = kwargs.pop("role_instructions", "")
+        base_role_instructions = kwargs.pop("base_role_instructions", _EXECUTOR_PRIMER)
         if expect_reasoning:
             role_instructions = (
                 f"{role_instructions}\n"
                 "- If a reasoning field is required, provide chain-of-thought in it."
             )
-        super().__init__(*args, role_instructions=role_instructions, **kwargs)
+        super().__init__(
+            *args,
+            role_instructions=role_instructions,
+            base_role_instructions=base_role_instructions,
+            **kwargs,
+        )
         self.bundle = bundle
         self.expect_reasoning = expect_reasoning
         self.qa_feedback = qa_feedback
@@ -143,8 +159,14 @@ class MPPQAAdapter(MPPBaseAdapter):
         bundle: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
-        role_instructions = kwargs.pop("role_instructions", _QA_PRIMER)
-        super().__init__(*args, role_instructions=role_instructions, **kwargs)
+        role_instructions = kwargs.pop("role_instructions", "")
+        base_role_instructions = kwargs.pop("base_role_instructions", _QA_PRIMER)
+        super().__init__(
+            *args,
+            role_instructions=role_instructions,
+            base_role_instructions=base_role_instructions,
+            **kwargs,
+        )
         self.bundle = bundle
 
     def format_task_description(self, signature: type[Signature]) -> str:

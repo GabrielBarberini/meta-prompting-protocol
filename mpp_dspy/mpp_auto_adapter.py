@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Callable, Mapping, Sequence
+from typing import Any, Callable, Mapping, Sequence
 
 import dspy
 from dspy.primitives.prediction import Prediction
+from dspy.teleprompt.teleprompt import Teleprompter
 
 from .dspy_adapters import MPPArchitectAdapter, MPPExecutorAdapter, MPPQAAdapter
 from .metrics import LongitudinalMetric, TraceCostMetric
@@ -269,20 +270,43 @@ class MPPAutoAdapter(dspy.Module):
 
 
 @dataclass(frozen=True)
-class LongitudinalCase:
-    user_goal: str
-    open_world: bool
-    use_cot: bool = False
-
-
-@dataclass(frozen=True)
 class FullPipelineResult:
     longitudinal_result: LongitudinalResult
     prediction: Prediction
 
 
-class MPPFullPipeline:
-    """Run longitudinal optimization around the vertical MPPAutoAdapter loop."""
+class _OptimizedMPPAutoAdapter(dspy.Module):
+    def __init__(
+        self,
+        base_adapter: MPPAutoAdapter,
+        blocks: Mapping[str, str],
+        longitudinal_result: LongitudinalResult,
+    ) -> None:
+        super().__init__()
+        self.base_adapter = base_adapter
+        self.blocks = dict(blocks)
+        self.template = longitudinal_result.template
+        self.longitudinal_result = longitudinal_result
+
+    def forward(
+        self,
+        *,
+        user_goal: str,
+        open_world: bool,
+        architect_max_iters: int | None = None,
+        executor_max_iters: int | None = None,
+    ) -> Prediction:
+        goal = MPPAutoAdapterOptimizer._apply_blocks(self.blocks, user_goal)
+        return self.base_adapter(
+            user_goal=goal,
+            open_world=open_world,
+            architect_max_iters=architect_max_iters,
+            executor_max_iters=executor_max_iters,
+        )
+
+
+class MPPAutoAdapterOptimizer(Teleprompter):
+    """DSPy teleprompter that optimizes MPPAutoAdapter prompt blocks."""
 
     def __init__(
         self,
@@ -293,38 +317,117 @@ class MPPFullPipeline:
         metric: LongitudinalMetric | None = None,
         adapter_kwargs: Mapping[str, object] | None = None,
     ) -> None:
+        super().__init__()
         self.template = template
         self.mutate_function = mutate_function
         self.longitudinal_iters = longitudinal_iters
         self.metric = metric or TraceCostMetric()
         self.adapter_kwargs = dict(adapter_kwargs or {})
 
+    def compile(
+        self,
+        student: MPPAutoAdapter,
+        *,
+        trainset: Any,
+        teacher=None,
+        valset=None,
+        **kwargs,
+    ) -> dspy.Module:
+        if not isinstance(student, MPPAutoAdapter):
+            raise TypeError(
+                "MPPAutoAdapterOptimizer expects an MPPAutoAdapter student."
+            )
+        case = self._normalize_case(trainset)
+        architect_max_iters = kwargs.get("architect_max_iters")
+        executor_max_iters = kwargs.get("executor_max_iters")
+        adapter_kwargs = self._resolve_adapter_kwargs(student)
+        adapter_kwargs.update(self.adapter_kwargs)
+        longitudinal_result = self._optimize_template(
+            case,
+            adapter_kwargs=adapter_kwargs,
+            architect_max_iters=architect_max_iters,
+            executor_max_iters=executor_max_iters,
+        )
+        blocks = longitudinal_result.blocks
+        base_program = self._build_program(
+            blocks,
+            use_cot=False,
+            adapter_kwargs=adapter_kwargs,
+        )
+        return _OptimizedMPPAutoAdapter(
+            base_program,
+            blocks,
+            longitudinal_result,
+        )
+
     def run(
         self,
         *,
         user_goal: str,
         open_world: bool,
-        cases: Sequence[LongitudinalCase],
+        case: Any,
         architect_max_iters: int | None = None,
         executor_max_iters: int | None = None,
         use_cot: bool = False,
     ) -> FullPipelineResult:
-        if not cases:
-            raise ValueError("cases must be non-empty for longitudinal optimization")
+        case = self._normalize_case(case)
+        adapter_kwargs = dict(self.adapter_kwargs)
+        longitudinal_result = self._optimize_template(
+            case,
+            adapter_kwargs=adapter_kwargs,
+            architect_max_iters=architect_max_iters,
+            executor_max_iters=executor_max_iters,
+        )
+        blocks = longitudinal_result.blocks
+        program = self._build_program(
+            blocks,
+            use_cot=use_cot,
+            adapter_kwargs=adapter_kwargs,
+        )
+        goal = self._apply_blocks(blocks, user_goal)
+        prediction = program(
+            user_goal=goal,
+            open_world=open_world,
+            architect_max_iters=architect_max_iters,
+            executor_max_iters=executor_max_iters,
+        )
+        return FullPipelineResult(
+            longitudinal_result=longitudinal_result,
+            prediction=prediction,
+        )
 
+    def _optimize_template(
+        self,
+        case: Any,
+        *,
+        adapter_kwargs: Mapping[str, object],
+        architect_max_iters: int | None,
+        executor_max_iters: int | None,
+    ) -> LongitudinalResult:
         def score_function(
-            _template: str, dataset: Sequence[LongitudinalCase], blocks
+            _template: str, dataset: Sequence[Any], blocks
         ) -> LongitudinalScore:
-            program_default = self._build_program(blocks, use_cot=False)
-            program_cot = self._build_program(blocks, use_cot=True)
+            program_default = self._build_program(
+                blocks,
+                use_cot=False,
+                adapter_kwargs=adapter_kwargs,
+            )
+            program_cot = self._build_program(
+                blocks,
+                use_cot=True,
+                adapter_kwargs=adapter_kwargs,
+            )
             traces: list[LongitudinalTrace] = []
             for case in dataset:
-                program = program_cot if case.use_cot else program_default
-                goal = self._apply_blocks(blocks, case.user_goal)
+                user_goal = self._case_user_goal(case)
+                open_world = self._case_open_world(case)
+                use_cot = self._case_use_cot(case)
+                program = program_cot if use_cot else program_default
+                goal = self._apply_blocks(blocks, user_goal)
                 try:
                     result = program(
                         user_goal=goal,
-                        open_world=case.open_world,
+                        open_world=open_world,
                         architect_max_iters=architect_max_iters,
                         executor_max_iters=executor_max_iters,
                     )
@@ -346,6 +449,9 @@ class MPPFullPipeline:
                     "executor_refinements_total",
                     result.executor_refinements,
                 )
+                issues = []
+                if result.qa_passed is False and result.qa_result:
+                    issues = list(result.qa_result.get("issues") or [])
                 traces.append(
                     LongitudinalTrace(
                         case=case,
@@ -356,6 +462,7 @@ class MPPFullPipeline:
                         bundle_stable=getattr(result, "bundle_stable", None),
                         qa_passed=result.qa_passed,
                         executor_stable=result.executor_stable,
+                        errors=issues,
                     )
                 )
             return LongitudinalScore(score=self.metric.score(traces), traces=traces)
@@ -365,30 +472,79 @@ class MPPFullPipeline:
             score_function=score_function,
             max_iters=self.longitudinal_iters,
         )
-        longitudinal_result = refiner.refine(self.template, cases)
-        blocks = longitudinal_result.blocks
-        program = self._build_program(blocks, use_cot=use_cot)
-        goal = self._apply_blocks(blocks, user_goal)
-        prediction = program(
-            user_goal=goal,
-            open_world=open_world,
-            architect_max_iters=architect_max_iters,
-            executor_max_iters=executor_max_iters,
-        )
-        return FullPipelineResult(
-            longitudinal_result=longitudinal_result,
-            prediction=prediction,
-        )
+        return refiner.refine(self.template, case)
+
+    @staticmethod
+    def _normalize_case(trainset: Any) -> Any:
+        if isinstance(trainset, Mapping):
+            return trainset
+        if isinstance(trainset, Sequence) and not isinstance(trainset, (str, bytes)):
+            if len(trainset) != 1:
+                raise ValueError(
+                    "MPPAutoAdapterOptimizer expects a single case; "
+                    "run multiple cases separately."
+                )
+            return trainset[0]
+        if trainset is None:
+            raise ValueError("A case is required for longitudinal optimization.")
+        return trainset
+
+    def _resolve_adapter_kwargs(self, student: MPPAutoAdapter) -> dict[str, object]:
+        kwargs: dict[str, object] = {
+            "spec_text": student.spec_text,
+            "max_iters": student.max_iters,
+            "architect_max_iters": student.architect_max_iters,
+            "executor_max_iters": student.executor_max_iters,
+            "architect": student.architect,
+            "executor": student.executor,
+            "qa": student.qa,
+            "architect_lm": student.architect_lm,
+            "executor_lm": student.executor_lm,
+            "qa_lm": student.qa_lm,
+        }
+        if student.executor_role_instructions is not None:
+            kwargs["executor_role_instructions"] = student.executor_role_instructions
+        if student.qa_role_instructions is not None:
+            kwargs["qa_role_instructions"] = student.qa_role_instructions
+        return kwargs
+
+    @staticmethod
+    def _case_user_goal(case: Any) -> str:
+        if isinstance(case, Mapping):
+            value = case.get("user_goal")
+        else:
+            value = getattr(case, "user_goal", None)
+        if not isinstance(value, str):
+            raise ValueError("Each case must provide a string user_goal.")
+        return value
+
+    @staticmethod
+    def _case_open_world(case: Any) -> bool:
+        if isinstance(case, Mapping):
+            return bool(case.get("open_world", False))
+        return bool(getattr(case, "open_world", False))
+
+    @staticmethod
+    def _case_use_cot(case: Any) -> bool:
+        if isinstance(case, Mapping):
+            return bool(case.get("use_cot", False))
+        return bool(getattr(case, "use_cot", False))
 
     def _build_program(
-        self, blocks: Mapping[str, str], *, use_cot: bool
+        self,
+        blocks: Mapping[str, str],
+        *,
+        use_cot: bool,
+        adapter_kwargs: Mapping[str, object],
     ) -> MPPAutoAdapter:
-        kwargs = dict(self.adapter_kwargs)
-        kwargs.setdefault("architect_role_instructions", blocks.get("architect_primer"))
-        kwargs.setdefault("executor_role_instructions", blocks.get("executor_primer"))
-        kwargs.setdefault("qa_role_instructions", blocks.get("qa_primer"))
-        if use_cot and "executor" not in kwargs:
-            kwargs["executor"] = dspy.ChainOfThought(ProtocolExecutor)
+        kwargs = dict(adapter_kwargs)
+        kwargs["architect_role_instructions"] = blocks.get("architect_primer")
+        kwargs["executor_role_instructions"] = blocks.get("executor_primer")
+        kwargs["qa_role_instructions"] = blocks.get("qa_primer")
+        if use_cot:
+            executor = kwargs.get("executor")
+            if executor is None or not _predictor_uses_cot(executor):
+                kwargs["executor"] = dspy.ChainOfThought(ProtocolExecutor)
         return MPPAutoAdapter(**kwargs)
 
     @staticmethod
