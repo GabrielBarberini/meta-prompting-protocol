@@ -65,18 +65,18 @@ Notes:
   as you move outward (defaults: final=4, architect=2, executor=1). Override
   `final_weight` to scale the set or pass explicit weights. If the
   bundle/executor fails to stabilize or QA fails, the case score is 0.
-- Vertical refinement returns per-iteration telemetry in `steps` on
+- Monadic refinement returns per-iteration telemetry in `steps` on
   `BundleResult` and `ExecutionResult` (includes outputs plus QA/errors).
-- For symmetry with longitudinal refinement, `MPPVerticalRefiner` wraps the
+- For symmetry with template optimization, `MPPVerticalRefiner` wraps the
   bundle and execution loops and returns a `VerticalResult`.
 - `MPPAutoAdapter` accepts `architect_role_instructions`,
   `executor_role_instructions`, and `qa_role_instructions` to override the
-  default role primers (useful for longitudinal prompt optimization).
+  default role primers (useful for template optimization).
 - `MPPAutoAdapter` also accepts `architect_lm`, `executor_lm`, and `qa_lm` so
   each stage can use a different LM (or temperature/RAG wrapper) while still
   sharing the same adapters.
-- `MPPAutoAdapterOptimizer` runs longitudinal optimization around the vertical
-  loops, so each longitudinal step evaluates full MPP executions before
+- `MPPAutoAdapterOptimizer` runs template optimization around the monadic
+  loop, so each optimization step evaluates full MPP executions before
   selecting the best template blocks.
 - If the executor uses `dspy.ChainOfThought`, `ExecutionResult.reasoning` is
   populated and the loop enforces that reasoning is returned.
@@ -87,7 +87,7 @@ Notes:
 - If the executor fails to converge within its cap, MPPAutoAdapter feeds the
   failure signal back into the architect and rebuilds the bundle, resetting the
   executor loop.
-- Use `architect_max_iters`/`executor_max_iters` to cap the vertical loops.
+- Use `architect_max_iters`/`executor_max_iters` to cap the monadic loops.
   (If you instantiate `MPPAdapterPipeline` directly, it accepts the same
   parameters.)
 - Swap the stability check with a domain-specific comparison if needed.
@@ -116,7 +116,7 @@ print(result.final_response)
 If you pass a `dspy.ChainOfThought` executor into `MPPAutoAdapter`, the result
 includes `executor_reasoning`.
 
-See the repository `README.md` for longitudinal optimizer examples and parallel
+See the repository `README.md` for template optimizer examples and parallel
 candidate guidance.
 
 ## Client Interface

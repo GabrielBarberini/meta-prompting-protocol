@@ -50,10 +50,10 @@ An MPP bundle contains the full rulebook alongside the data.
 
 ```mermaid
 flowchart LR
-  U[User Goal] --> A["Architect\n(Fixed Adapter)"]
-  A --> B["Bundle\nSpec + Payload"]
-  B --> E["Executor\n(Derived Adapter)"]
-  E --> QF["Final QA\n(closed-world)"]
+  U[User Goal] --> A["Architect<br>(Fixed Adapter)"]
+  A --> B["Bundle<br>Spec + Payload"]
+  B --> E["Executor<br>(Derived Adapter)"]
+  E --> QF["Final QA<br>(closed-world)"]
   QF --> R[Final Response]
   E -. "open_world: QA loop" .-> Q[QA]
   Q -. feedback .-> E
@@ -65,11 +65,20 @@ flowchart LR
 2.  **Protocol Architect (MPP aware):** Derivates a MPP compliant protocol on the fly with tags like `$genre` and `$plot_points`. Then encodes the user's request accordingly and bundles it with the generated protocol spec.
 3.  **Executor (MPP aware):** Receives the bundle, learns the new protocol, and generates a horror story based on the structured payload.
 
+#### Optimization Overview
+MPP exposes two optimization systems:
+- **Monadic refinement:** retries a single request using QA/validation feedback to
+  recover missing info or compliance until it converges. This is the default
+  behavior of `MPPAutoAdapter`.
+- **Template optimization:** wraps the monadic loop in a TextGrad-style mutation
+  cycle to find a prompt framing that converges faster (fewer retries). This is
+  what `MPPAutoAdapterOptimizer` compiles.
+
 #### Quick Start
 
 ##### DSPy
 If you are using DSPy, `MPPAutoAdapter` wraps the full MPP workflow as a single module.
-Example: vertical-only refinement.
+Example: monadic refinement only.
 
 ```python
 import dspy
@@ -90,9 +99,10 @@ print(result.final_response)
 To plug in a custom provider, supply any DSPy-compatible LM to
 `dspy.settings.configure`. See `mpp_dspy/README.md` for notes.
 
-For a full longitudinal+vertical pipeline, use `MPPAutoAdapterOptimizer` as a
-DSPy teleprompter to compile an optimized `MPPAutoAdapter` for a single case
-(see `mpp_dspy/README.md`). Example: longitudinal + vertical refinement.
+For full template optimization + monadic refinement, use
+`MPPAutoAdapterOptimizer` as a DSPy teleprompter to compile an optimized
+`MPPAutoAdapter` for a single case (see `mpp_dspy/README.md`). Example: template
+optimization + monadic refinement.
 
 ```python
 import dspy
@@ -139,24 +149,25 @@ Recommended mutable blocks:
 fixed to avoid mutating the user goal or intent. Only the MPP spec text itself
 and the required bundle structure/order stay immutable.
 
-Refinement runs in two distinct loops:
-- Longitudinal loop (TextGrad or other optimizers) mutates the allowed text
-  segments to improve fit for a case (run multiple cases separately if needed).
-- Vertical loop (monadic refinement) iterates per request to stabilize a single
+Optimization uses two loops:
+- Template optimization loop (TextGrad or other optimizers) mutates allowed text
+  segments to improve convergence for a case (run multiple cases separately if
+  needed).
+- Monadic refinement loop retries per request to stabilize a single
   bundle/execution with validation/QA feedback.
 See `FLOW_OF_INFORMATION.md` for a step-by-step data flow breakdown.
 
 ```mermaid
 flowchart LR
-  D[Case] --> V["MPPAutoAdapter\n(Vertical Loop)"]
+  D[Case] --> V["MPPAutoAdapter<br>(Monadic Loop)"]
   T[Template Blocks] --> V
   V --> S[Trace Score]
   S --> M[Mutate Template Blocks]
   M --> T
 ```
 
-Longitudinal scoring is pluggable: implement `LongitudinalMetric` to replace the
-default trace-cost metric used by `MPPAutoAdapterOptimizer`.
+Template-optimization scoring is pluggable via `LongitudinalMetric`, which
+replaces the default trace-cost metric used by `MPPAutoAdapterOptimizer`.
 The default `TraceCostMetric` uses a dominant final-response weight and doubles
 weights as you move outward (defaults: final=4, architect=2, executor=1).
 Override `final_weight` to scale the set or pass explicit weights. If the
@@ -181,18 +192,19 @@ Modular pieces you can swap without changing the core flow:
 - `MPPAutoAdapterOptimizer`: DSPy teleprompter that searches for the best
   MPPAutoAdapter framing for a single case while preserving the MPP spec.
 
-##### Bilevel Optimization (Why both loops matter)
-You can view MPP as a bilevel system:
-- **Inner (vertical) loop:** guarantees correctness for a single request, but
-  can be costly if it needs multiple retries.
-- **Outer (longitudinal) loop:** tunes prompts for a case to reduce that
+##### Two-Loop Optimization (Why both loops matter)
+You can view MPP as a two-loop system:
+- **Inner (monadic refinement):** guarantees correctness for a single request,
+  but can be costly if it needs multiple retries.
+- **Outer (template optimization):** tunes prompts for a case to reduce that
   inner-loop cost over time.
 
-Important: do not score longitudinal updates solely on the final answer.
-If the vertical loop "fixes" errors, the prompt can look perfect while still
-being expensive. Instead, score the trace cost (iteration counts, QA failures,
-validation errors). If a bundle or executor never stabilizes, treat it as max
-loss and move on. The goal is not just convergence, but faster convergence.
+Important: do not score template-optimization updates solely on the final
+answer. If the monadic loop "fixes" errors, the prompt can look perfect while
+still being expensive. Instead, score the trace cost (iteration counts, QA
+failures, validation errors). If a bundle or executor never stabilizes, treat it
+as max loss and move on. The goal is not just convergence, but faster
+convergence.
 
 ##### Raw
 Download the [MPP Specification](docs/meta_prompting_protocol_spec.md) and attach it to an AI model session. Frame the AI as a "Protocol Architect" or "Executor" and start generating or executing MPP bundles.
