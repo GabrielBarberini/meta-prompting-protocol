@@ -50,9 +50,9 @@ An MPP bundle contains the full rulebook alongside the data.
 
 ```mermaid
 flowchart LR
-  U[User Goal] --> A["Architect<br>(Fixed Adapter)"]
+  U[User Goal] --> A[Architect]
   A --> B["Bundle<br>Spec + Payload"]
-  B --> E["Executor<br>(Derived Adapter)"]
+  B --> E[Executor]
   E --> QF["Final QA<br>(closed-world)"]
   QF --> R[Final Response]
   E -. "open_world: QA loop" .-> Q[QA]
