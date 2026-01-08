@@ -68,6 +68,47 @@ into DSPy modules and predictors. The bundle refinement loop is formalized as an
 internal DSPy teleprompter (`MPPBundleOptimizer`) and used by `MPPAutoAdapter`
 to keep the adapter a single black-box module.
 
+## Template mutation example
+
+```python
+import dspy
+
+from mpp_dspy import DefaultLongitudinalMutator, MPPAutoAdapter, MPPAutoAdapterOptimizer
+
+lm = dspy.OpenAI(model="gpt-4o-mini")
+dspy.settings.configure(lm=lm)
+
+template = """\
+[ENTRY_PROMPT]
+Follow the user goal exactly and keep constraints intact.
+
+[STRATEGY_PAYLOAD]
+{{MPP_MUTABLE:strategy_payload}}
+Use the minimal strategy tag required.
+{{/MPP_MUTABLE}}
+
+[ARCHITECT_PRIMER]
+{{MPP_MUTABLE:architect_primer}}
+Keep protocols compact and schema-compliant.
+{{/MPP_MUTABLE}}
+
+[EXECUTOR_PRIMER]
+{{MPP_MUTABLE:executor_primer}}
+Emit only the requested output.
+{{/MPP_MUTABLE}}
+"""
+
+case = {"user_goal": "Produce a structured risk checklist.", "open_world": True}
+
+optimizer = MPPAutoAdapterOptimizer(
+    template=template,
+    mutate_function=DefaultLongitudinalMutator(lm),
+)
+optimized = optimizer.compile(MPPAutoAdapter(), trainset=case)
+result = optimized(user_goal=case["user_goal"], open_world=True)
+print(result.final_response)
+```
+
 ## Client Interface
 
 `MPPAutoAdapter` works with any DSPy-compatible LM. Configure DSPy with the
@@ -76,7 +117,7 @@ provider of your choice and pass it to `dspy.settings.configure`.
 ## Notes
 - The refinement loops mirror the monadic polishing approach: propose -> validate
   -> refine until the bundle/output stabilizes.
-- Longitudinal refinement (TextGrad-style) can be run separately over templates
+- Template optimization (TextGrad-style) can be run separately over templates
   with `{{MPP_MUTABLE:...}}` tokens to optimize prompt segments for a case.
 - `MPPAutoAdapterOptimizer` is a DSPy teleprompter: call `compile()` with a base
   `MPPAutoAdapter` and a single case (mapping or object with `user_goal` /
