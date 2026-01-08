@@ -63,7 +63,7 @@ It only edits declared mutable blocks.
 ```mermaid
 flowchart LR
   U[User Goal] --> T[Template Blocks]
-  T --> V[Vertical Loop<br/>Architect → Bundle → Executor → QA]
+  T --> V["Vertical Loop\nArchitect → Bundle → Executor → QA"]
   V --> R[Final Response]
   V -. "trace + QA" .-> S[Trace Score]
   S --> M[Mutate Blocks]

@@ -50,10 +50,10 @@ An MPP bundle contains the full rulebook alongside the data.
 
 ```mermaid
 flowchart LR
-  U[User Goal] --> A[Architect<br/>(Fixed Adapter)]
-  A --> B[Bundle<br/>Spec + Payload]
-  B --> E[Executor<br/>(Derived Adapter)]
-  E --> QF[Final QA<br/>(closed-world)]
+  U[User Goal] --> A["Architect\n(Fixed Adapter)"]
+  A --> B["Bundle\nSpec + Payload"]
+  B --> E["Executor\n(Derived Adapter)"]
+  E --> QF["Final QA\n(closed-world)"]
   QF --> R[Final Response]
   E -. "open_world: QA loop" .-> Q[QA]
   Q -. feedback .-> E
@@ -148,7 +148,7 @@ See `FLOW_OF_INFORMATION.md` for a step-by-step data flow breakdown.
 
 ```mermaid
 flowchart LR
-  D[Dataset Cases] --> V[MPPAutoAdapter<br/>(Vertical Loop)]
+  D[Case] --> V["MPPAutoAdapter\n(Vertical Loop)"]
   T[Template Blocks] --> V
   V --> S[Trace Score]
   S --> M[Mutate Template Blocks]
