@@ -25,7 +25,7 @@
   <rect x="350" y="20" width="320" height="90" rx="10" class="box-strong" />
   <text x="510" y="42" class="label" text-anchor="middle">Vertical Loop</text>
   <text x="510" y="62" class="label-soft" text-anchor="middle">Architect → Bundle → Executor</text>
-  <text x="510" y="78" class="label-soft" text-anchor="middle">QA: open-world loop / closed-world final</text>
+  <text x="510" y="78" class="label-soft" text-anchor="middle">QA: open-world gate / closed-world final</text>
   <text x="510" y="94" class="label-soft" text-anchor="middle">Failure feedback → Architect</text>
 
   <rect x="820" y="40" width="150" height="50" rx="8" class="box" />

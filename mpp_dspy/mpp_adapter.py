@@ -33,7 +33,7 @@ class BundleResult(BaseModel):
 class ExecutionResult(BaseModel):
     model_config = ConfigDict(frozen=True)
 
-    final_response: str
+    decoded_bundle: str
     reasoning: Optional[str]
     iterations: int
     stable: bool
@@ -136,21 +136,6 @@ def _normalize_response_for_stability(response: str) -> str:
     return " ".join(stripped.split())
 
 
-def _strip_reasoning_for_feedback(response: str) -> str:
-    text = response.strip()
-    if not text:
-        return text
-    stripped = _strip_code_fences(text)
-    for candidate in (stripped, text):
-        try:
-            parsed = json.loads(candidate)
-        except json.JSONDecodeError:
-            continue
-        parsed = _drop_reasoning_fields(parsed)
-        return json.dumps(parsed, indent=2, ensure_ascii=True)
-    return response
-
-
 def _response_to_text(response: Any) -> str:
     if isinstance(response, str):
         return response
@@ -160,7 +145,7 @@ def _response_to_text(response: Any) -> str:
 
 
 class MPPAdapterPipeline:
-    """Two-stage adapter pipeline: architect -> derived spec -> executor."""
+    """Two-stage adapter pipeline: architect -> bundle -> executor."""
 
     def __init__(
         self,
@@ -168,9 +153,6 @@ class MPPAdapterPipeline:
         executor: Predictor,
         qa: Optional[Predictor] = None,
         validate_bundle: Callable[[Mapping[str, Any]], None] = validate_mpp_bundle,
-        set_executor_feedback: Optional[
-            Callable[[Optional[Mapping[str, Any]]], None]
-        ] = None,
         architect_max_iters: int = 10,
         executor_max_iters: int = 10,
     ) -> None:
@@ -178,7 +160,6 @@ class MPPAdapterPipeline:
         self.executor = executor
         self.qa = qa
         self.validate_bundle = validate_bundle
-        self.set_executor_feedback = set_executor_feedback
         self.architect_max_iters = architect_max_iters
         self.executor_max_iters = executor_max_iters
 
@@ -235,48 +216,30 @@ class MPPAdapterPipeline:
         reasoning: Optional[str] = None
         stable = False
         iterations = max_iters
-        final_response = ""
-        qa_feedback: Optional[Mapping[str, Any]] = None
+        decoded_bundle = ""
         steps: list[VerticalStep] = []
 
         if open_world and self.qa is None:
             raise ValueError("open_world execution requires a QA predictor.")
 
-        try:
-            for i in range(max_iters):
-                if open_world and self.set_executor_feedback is not None:
-                    self.set_executor_feedback(qa_feedback)
-                prediction = self.executor(
-                    meta_protocol_version=bundle["meta_protocol_version"],
-                    derivative_protocol_specification=bundle[
-                        "derivative_protocol_specification"
-                    ],
-                    derivative_protocol_payload=bundle["derivative_protocol_payload"],
+        for i in range(max_iters):
+            bundle_text = json.dumps(bundle, indent=2, ensure_ascii=True)
+            prediction = self.executor(
+                bundle_text=bundle_text,
+            )
+            response = _response_to_text(_get_field(prediction, "decoded_bundle"))
+            reasoning = _extract_reasoning(prediction)
+            if expect_reasoning and reasoning is None:
+                raise ValueError(
+                    "Executor is configured for ChainOfThought but no reasoning "
+                    "was returned."
                 )
-                response = _response_to_text(_get_field(prediction, "final_response"))
-                reasoning = _extract_reasoning(prediction)
-                if expect_reasoning and reasoning is None:
-                    raise ValueError(
-                        "Executor is configured for ChainOfThought but no reasoning "
-                        "was returned."
-                    )
 
-                comparable = _normalize_response_for_stability(response)
+            comparable = _normalize_response_for_stability(response)
 
-                if open_world and self.qa is not None:
-                    qa_result = self._run_qa(bundle, response)
-                    qa_passed = _qa_passed(qa_result)
-                    if qa_passed:
-                        stable = True
-                        iterations = i + 1
-                        final_response = response
-                        break
-                    qa_feedback = {
-                        "verdict": qa_result.get("verdict"),
-                        "issues": qa_result.get("issues"),
-                        "previous_response": _strip_reasoning_for_feedback(response),
-                    }
-
+            if open_world and self.qa is not None:
+                qa_result = self._run_qa(bundle, response)
+                qa_passed = _qa_passed(qa_result)
                 steps.append(
                     VerticalStep(
                         iteration=i + 1,
@@ -285,29 +248,42 @@ class MPPAdapterPipeline:
                         qa_passed=qa_passed,
                     )
                 )
-
-                if last_comparable == comparable:
+                iterations = i + 1
+                if qa_passed:
                     stable = True
-                    iterations = i + 1
-                    final_response = response
-                    break
-                last_response = response
-                last_comparable = comparable
-        finally:
-            if self.set_executor_feedback is not None:
-                self.set_executor_feedback(None)
+                    decoded_bundle = response
+                else:
+                    last_response = response
+                break
+
+            steps.append(
+                VerticalStep(
+                    iteration=i + 1,
+                    output=response,
+                    qa_result=qa_result,
+                    qa_passed=qa_passed,
+                )
+            )
+
+            if last_comparable == comparable:
+                stable = True
+                iterations = i + 1
+                decoded_bundle = response
+                break
+            last_response = response
+            last_comparable = comparable
 
         if not stable:
-            final_response = last_response or ""
+            decoded_bundle = last_response or ""
 
         if not open_world and final_qa:
             if self.qa is None:
                 raise ValueError("final_qa requires a QA predictor.")
-            qa_result = self._run_qa(bundle, final_response)
+            qa_result = self._run_qa(bundle, decoded_bundle)
             qa_passed = _qa_passed(qa_result)
 
         return ExecutionResult(
-            final_response=final_response,
+            decoded_bundle=decoded_bundle,
             reasoning=reasoning,
             iterations=iterations,
             stable=stable,
@@ -317,7 +293,7 @@ class MPPAdapterPipeline:
         )
 
     def _run_qa(
-        self, bundle: Mapping[str, Any], final_response: str
+        self, bundle: Mapping[str, Any], decoded_bundle: str
     ) -> Mapping[str, Any]:
         if self.qa is None:
             raise ValueError("QA predictor is not configured.")
@@ -327,12 +303,19 @@ class MPPAdapterPipeline:
                 "derivative_protocol_specification"
             ],
             derivative_protocol_payload=bundle["derivative_protocol_payload"],
-            final_response=final_response,
+            decoded_bundle=decoded_bundle,
         )
-        return {
+        result: dict[str, Any] = {
             "verdict": _get_field(prediction, "verdict"),
             "issues": _get_field(prediction, "issues"),
         }
+        repair_examples = _get_field(prediction, "repair_examples")
+        if not isinstance(repair_examples, list):
+            raise TypeError("QA repair_examples must be a list.")
+        result["repair_examples"] = [
+            str(item) for item in repair_examples if item is not None
+        ]
+        return result
 
 
 class MPPVerticalRefiner:
@@ -344,9 +327,6 @@ class MPPVerticalRefiner:
         executor: Predictor,
         qa: Optional[Predictor] = None,
         validate_bundle: Callable[[Mapping[str, Any]], None] = validate_mpp_bundle,
-        set_executor_feedback: Optional[
-            Callable[[Optional[Mapping[str, Any]]], None]
-        ] = None,
         architect_max_iters: int = 10,
         executor_max_iters: int = 10,
     ) -> None:
@@ -355,7 +335,6 @@ class MPPVerticalRefiner:
             executor=executor,
             qa=qa,
             validate_bundle=validate_bundle,
-            set_executor_feedback=set_executor_feedback,
             architect_max_iters=architect_max_iters,
             executor_max_iters=executor_max_iters,
         )

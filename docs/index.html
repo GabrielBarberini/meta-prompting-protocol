@@ -121,7 +121,7 @@
                     <p class="text-sm font-semibold text-slate-600">Vertical refinement</p>
                     <p class="mt-3 text-sm text-slate-600">
                         The vertical loop handles a single request, iterating bundle + executor refinement
-                        until outputs stabilize and QA passes.
+                        with QA gating (stability applies in closed-world runs).
                     </p>
                 </div>
                 <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm w-full max-w-3xl text-left">
@@ -134,7 +134,7 @@ dspy.settings.configure(lm=lm)
 
 program = MPPAutoAdapter()
 result = program(user_goal="Draft a crisp product launch email.", open_world=True)
-print(result.final_response)</code></pre>
+print(result.decoded_bundle)</code></pre>
                 </div>
                 <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm w-full max-w-3xl text-left">
                     <p class="text-sm font-semibold text-slate-600">Example: longitudinal + vertical</p>
@@ -156,7 +156,7 @@ optimizer = MPPAutoAdapterOptimizer(
 )
 optimized = optimizer.compile(program, trainset=case)
 result = optimized(user_goal="Draft a crisp product launch email.", open_world=True)
-print(result.final_response)</code></pre>
+print(result.decoded_bundle)</code></pre>
                 </div>
             </div>
         </section>

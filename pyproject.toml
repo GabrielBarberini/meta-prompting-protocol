@@ -8,3 +8,6 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -8,10 +7,18 @@ from dspy.adapters.json_adapter import JSONAdapter
 from dspy.signatures.signature import Signature
 
 _ARCHITECT_PRIMER = (
-    "You are the MPP Architect.\n"
+    "You are the Meta-prompting protocol Architect.\n"
     "- Follow the MPP specification strictly.\n"
     "- Derive a task-specific derivative protocol (schema, tags, processors).\n"
     "- Encode the user goal into the payload using the derived protocol.\n"
+    "- The goal is a self-contained bundle: an Executor will only receive the final "
+    "bundle and nothing else.\n"
+    "- If refinement feedback is provided (see <MPP_REFINEMENT_TRACE>), treat it as a "
+    "change log and update the derivative protocol specification and/or payload so "
+    "the next bundle passes QA without any external side-channel context.\n"
+    "- When QA feedback indicates format/schema issues, strengthen the derivative "
+    "protocol with explicit output constraints and (when helpful) include small "
+    "canonical examples inside the derivative protocol specification.\n"
     "- The raw user goal is provided between <RAW_USER_GOAL>...</RAW_USER_GOAL>.\n"
     "- Preserve the raw user goal verbatim inside the payload's primary task/"
     "instruction tag.\n"
@@ -22,18 +29,23 @@ _ARCHITECT_PRIMER = (
 )
 
 _EXECUTOR_PRIMER = (
-    "You are the MPP Executor.\n"
-    "- Follow the MPP specification strictly.\n"
-    "- Parse the derivative_protocol_specification to learn tags and processors.\n"
-    "- Decode the payload accordingly and generate the final response.\n"
-    "- Output a single JSON object and nothing else."
+    "Decode the bundle and execute the task at hand.\n"
+    "- Output a single JSON object and nothing else.\n"
+    "- The top-level response must include only the `decoded_bundle` field.\n"
+    "- The `decoded_bundle` value must follow the derivative protocol's output schema."
 )
 
 _QA_PRIMER = (
     "You are an MPP QA agent.\n"
-    "- Follow the MPP specification strictly.\n"
+    "- Follow the Meta-prompting protocol specification strictly.\n"
     "- Validate the executor response against the bundle constraints.\n"
-    "- Return a JSON object with 'verdict' and 'issues' only.\n"
+    "- Derive all expectations (especially output format/schema) from the bundle's "
+    "derivative protocol specification and payload.\n"
+    "- Return a JSON object with 'verdict', 'issues', and 'repair_examples'.\n"
+    "- 'repair_examples' must be an array of short strings; use [] when there is "
+    "nothing to repair.\n"
+    "- Ensure repair_examples entries conform to the required output schema and use "
+    "valid JSON (double quotes).\n"
     "- 'verdict' must be 'pass' or 'fail'.\n"
     "- 'issues' must be an array of short strings (empty if pass)."
 )
@@ -110,9 +122,7 @@ class MPPExecutorAdapter(MPPBaseAdapter):
     def __init__(
         self,
         *args,
-        bundle: Mapping[str, Any] | None = None,
         expect_reasoning: bool = False,
-        qa_feedback: Mapping[str, Any] | None = None,
         **kwargs,
     ) -> None:
         role_instructions = kwargs.pop("role_instructions", "")
@@ -128,27 +138,11 @@ class MPPExecutorAdapter(MPPBaseAdapter):
             base_role_instructions=base_role_instructions,
             **kwargs,
         )
-        self.bundle = bundle
         self.expect_reasoning = expect_reasoning
-        self.qa_feedback = qa_feedback
 
     def format_task_description(self, signature: type[Signature]) -> str:
         base = super().format_task_description(signature)
         parts = [base] if base else []
-        if self.bundle and "derivative_protocol_specification" in self.bundle:
-            spec = json.dumps(
-                self.bundle["derivative_protocol_specification"],
-                indent=2,
-                ensure_ascii=True,
-            )
-            parts.append(f"Derived protocol specification:\n{spec}")
-        if self.qa_feedback:
-            feedback = json.dumps(
-                self.qa_feedback,
-                indent=2,
-                ensure_ascii=True,
-            )
-            parts.append(f"QA feedback from previous attempt:\n{feedback}")
         return "\n\n".join(parts).strip()
 
 
@@ -172,11 +166,4 @@ class MPPQAAdapter(MPPBaseAdapter):
     def format_task_description(self, signature: type[Signature]) -> str:
         base = super().format_task_description(signature)
         parts = [base] if base else []
-        if self.bundle and "derivative_protocol_specification" in self.bundle:
-            spec = json.dumps(
-                self.bundle["derivative_protocol_specification"],
-                indent=2,
-                ensure_ascii=True,
-            )
-            parts.append(f"Derived protocol specification:\n{spec}")
         return "\n\n".join(parts).strip()

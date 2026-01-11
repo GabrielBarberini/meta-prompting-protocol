@@ -6,13 +6,13 @@ where mutations occur, and which stages only append feedback.
 ## Overview
 MPP operates in two loops:
 - **Monadic refinement loop (per request):** Architect -> Bundle -> Executor ->
-  QA -> feedback.
+  QA -> refinement trace (fed back to the Architect).
 - **Template optimization loop (per case):** mutates prompt blocks to reduce
   monadic-loop friction for that case over time.
 
 Only the **template optimization** loop mutates templates. The **monadic**
-loop does not
-rewrite prior context; it appends feedback and retries until stable.
+loop does not rewrite prior context; it appends feedback to the Architect
+prompt and retries until stable.
 
 ## DSPy Components (How They Connect)
 - `MPPAutoAdapter`: DSPy module that runs the monadic loop for a single request.
@@ -35,11 +35,12 @@ Flow:
 4. **MCP tools (optional)** execute in the declared `mcp_tooling.call_order`
    when the derivative protocol requires structured tool usage.
 5. **QA** validates the response.
-   - **Open-world:** QA runs every iteration; a pass ends the loop.
+   - **Open-world:** QA runs after each executor attempt; a failure ends the
+     executor loop and triggers architect refinement.
    - **Closed-world:** QA runs once after executor stabilization.
-5. **Feedback** is appended and the loop retries:
+6. **Feedback** is appended to the Architect prompt and the loop retries:
    - Architect receives the previous bundle plus error/QA feedback.
-   - Executor receives QA feedback when available.
+   - Executor runs once per bundle in open-world; QA only gates completion.
 
 The original user goal is preserved verbatim inside `<RAW_USER_GOAL>...</RAW_USER_GOAL>`.
 Feedback is appended, not substituted.
@@ -58,8 +59,8 @@ structure. It only edits declared mutable blocks.
 - **Mutable:** template blocks marked with `{{MPP_MUTABLE:...}}`.
 - **Immutable:** MPP bundle keys/order, raw user goal, and non-mutable template
   text.
-- **Feedback:** appended to prompts (previous bundle + QA verdicts), never used to
-  overwrite the original goal.
+- **Feedback:** appended to the Architect prompt (previous bundle + QA verdicts),
+  never used to overwrite the original goal.
 
 ## Combined Flow (Mermaid)
 ```mermaid

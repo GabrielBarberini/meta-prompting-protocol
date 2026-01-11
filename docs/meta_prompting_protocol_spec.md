@@ -1,6 +1,6 @@
 # **Meta-Prompting Protocol Specification (MPP)**
 
-Version 1.4.0
+Version 1.5.0
 
 ## **1. Abstract**
 
@@ -35,6 +35,13 @@ MPP defines a two-stage, multi-agent workflow.
 
 [Optionally] The Quality Assurance Agent: A third AI agent that can be introduced to validate the Executor's output against the original user's intent, using the structured data provided in the MPP Bundle.
 
+When QA is used, it MUST return a JSON object with:
+* `verdict` (String, Required): `pass` or `fail`.
+* `issues` (Array of Strings, Required): Short violations (empty if pass).
+* `repair_examples` (Array of Strings, Required): Use `[]` when nothing needs
+  repair; when verdict is fail, include short examples that match the required
+  output schema.
+
 ## **3.1 Iterative Polishing (Monadic Refinement)**
 
 MPP assumes that both protocol derivation (input layer) and protocol decoding (output layer) benefit from iterative polishing. A Protocol Architect SHOULD run a refine -> validate -> revise loop until the derived specification and payload stop changing materially. An Executor SHOULD apply the same loop during decoding, re-generating and re-validating until the output consistently satisfies the protocol's constraints.
@@ -55,7 +62,7 @@ An MPP-compliant bundle MUST be a JSON object containing the following three top
   
 ```json
 {  
-  "meta_protocol_version": "1.4.0",  
+  "meta_protocol_version": "1.5.0",  
   "derivative_protocol_specification": { ... },  
   "derivative_protocol_payload": { ... }  
 }
@@ -173,7 +180,7 @@ This example demonstrates the entire MPP flow.
 
 ```json
 {  
-  "meta_protocol_version": "1.4.0",  
+  "meta_protocol_version": "1.5.0",
   "derivative_protocol_specification": {  
     "protocol_name": "Creative Writing Protocol (CWP)",  
     "protocol_version": "1.0",

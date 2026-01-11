@@ -18,7 +18,7 @@ def test_execute_stabilizes_with_equivalent_json(mpp_bundle_minimal) -> None:
     )
 
     def executor(**_kwargs: Any) -> dict[str, Any]:
-        return {"final_response": next(responses)}
+        return {"decoded_bundle": next(responses)}
 
     pipeline = MPPAdapterPipeline(
         architect=lambda **_kwargs: mpp_bundle_minimal,
@@ -34,52 +34,49 @@ def test_execute_stabilizes_with_equivalent_json(mpp_bundle_minimal) -> None:
     assert result.iterations == 2
 
 
-def test_execute_passes_qa_feedback_to_executor(mpp_bundle_minimal) -> None:
-    """Provide QA verdict/issues when refinement follows a QA failure."""
-    # Arrange: record feedbacks passed into the executor adapter.
-    feedbacks: list[dict[str, Any] | None] = []
-
-    def set_feedback(value: dict[str, Any] | None) -> None:
-        feedbacks.append(value)
+def test_execute_open_world_short_circuits_on_qa_fail(mpp_bundle_minimal) -> None:
+    """Open-world execution returns after the first QA failure."""
 
     responses = iter(["bad-output", "good-output"])
+    executor_calls = {"count": 0}
 
     def executor(**_kwargs: Any) -> dict[str, Any]:
-        return {"final_response": next(responses)}
+        executor_calls["count"] += 1
+        return {"decoded_bundle": next(responses)}
 
     qa_calls = {"count": 0}
 
     def qa(**_kwargs: Any) -> dict[str, Any]:
         qa_calls["count"] += 1
-        if qa_calls["count"] == 1:
-            return {"verdict": "fail", "issues": ["missing field"]}
-        return {"verdict": "pass", "issues": []}
+        return {
+            "verdict": "fail",
+            "issues": ["missing field"],
+            "repair_examples": ['{"reasoning":"...","final":{"value":1}}'],
+        }
 
     pipeline = MPPAdapterPipeline(
         architect=lambda **_kwargs: mpp_bundle_minimal,
         executor=executor,
         qa=qa,
-        set_executor_feedback=set_feedback,
         executor_max_iters=2,
     )
 
     # Act: run open-world execution with QA feedback enabled.
     result = pipeline.execute(mpp_bundle_minimal, open_world=True)
 
-    # Assert: QA feedback is passed after a failure, then cleared on exit.
-    assert result.qa_passed is True
-    assert feedbacks[0] is None
-    assert feedbacks[1]["verdict"] == "fail"
-    assert feedbacks[1]["previous_response"] == "bad-output"
-    assert feedbacks[-1] is None
+    # Assert: QA failure returns after the first attempt.
+    assert result.qa_passed is False
+    assert result.iterations == 1
+    assert executor_calls["count"] == 1
+    assert qa_calls["count"] == 1
 
 
 def test_execute_requires_reasoning_when_expected(mpp_bundle_minimal) -> None:
     """Raise when Chain-of-Thought is expected but reasoning is absent."""
 
-    # Arrange: executor returns only final_response.
+    # Arrange: executor returns only decoded_bundle.
     def executor(**_kwargs: Any) -> dict[str, Any]:
-        return {"final_response": "ok"}
+        return {"decoded_bundle": "ok"}
 
     pipeline = MPPAdapterPipeline(
         architect=lambda **_kwargs: mpp_bundle_minimal,

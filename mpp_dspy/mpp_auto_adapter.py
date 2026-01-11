@@ -9,6 +9,7 @@ from dspy.primitives.prediction import Prediction
 from dspy.teleprompt.teleprompt import Teleprompter
 
 from .dspy_adapters import MPPArchitectAdapter, MPPExecutorAdapter, MPPQAAdapter
+from .feedback import FeedbackEvent, FeedbackTrace
 from .metrics import LongitudinalMetric, TraceCostMetric
 from .mpp_adapter import ExecutionResult, MPPAdapterPipeline
 from .mpp_optimizer import (
@@ -72,24 +73,15 @@ def _strip_reasoning_for_feedback(response: str) -> str:
     return response
 
 
-def _format_executor_feedback(exec_result: ExecutionResult) -> str:
-    refinements = max(exec_result.iterations - 1, 0)
-    lines = [
-        "Executor failed to stabilize within the configured iteration cap.",
-        f"Executor refinements: {refinements}.",
-    ]
-    if exec_result.qa_result is not None:
-        verdict = exec_result.qa_result.get("verdict")
-        issues = exec_result.qa_result.get("issues")
-        lines.append(f"QA verdict: {verdict}")
-        if issues:
-            lines.append(f"QA issues: {issues}")
-    if exec_result.final_response:
-        lines.append(
-            "Last executor response (reasoning removed where possible):\n"
-            f"{_strip_reasoning_for_feedback(exec_result.final_response)}"
+def _append_executor_feedback(
+    trace: FeedbackTrace, exec_result: ExecutionResult
+) -> FeedbackTrace:
+    event = FeedbackEvent.from_execution_result(exec_result)
+    if event.last_response:
+        event = event.model_copy(
+            update={"last_response": _strip_reasoning_for_feedback(event.last_response)}
         )
-    return "\n".join(lines)
+    return trace.append(event)
 
 
 class MPPAutoAdapter(dspy.Module):
@@ -172,6 +164,7 @@ class MPPAutoAdapter(dspy.Module):
             self.architect, self.architect_adapter, lm=self.architect_lm
         )
         previous_bundle = None
+        feedback_trace = FeedbackTrace()
         feedback = None
         bundle_result = None
         exec_result = None
@@ -194,7 +187,6 @@ class MPPAutoAdapter(dspy.Module):
 
             executor_kwargs = {
                 "spec_text": self.spec_text,
-                "bundle": bundle_result.bundle,
                 "expect_reasoning": self.executor_expect_reasoning,
             }
             if self.executor_role_instructions is not None:
@@ -203,9 +195,6 @@ class MPPAutoAdapter(dspy.Module):
             executor_call = _wrap_with_adapter(
                 self.executor, executor_adapter, lm=self.executor_lm
             )
-
-            def set_executor_feedback(value):
-                executor_adapter.qa_feedback = value
 
             if self.qa is None:
                 raise ValueError("QA predictor is required for QA gating.")
@@ -222,7 +211,6 @@ class MPPAutoAdapter(dspy.Module):
                 architect=architect_call,
                 executor=executor_call,
                 qa=qa_call,
-                set_executor_feedback=set_executor_feedback,
             )
             exec_result = exec_pipeline.execute(
                 bundle_result.bundle,
@@ -240,9 +228,8 @@ class MPPAutoAdapter(dspy.Module):
                 success = exec_result.stable and qa_passed is True
             if success:
                 break
-            feedback = _format_executor_feedback(
-                exec_result,
-            )
+            feedback_trace = _append_executor_feedback(feedback_trace, exec_result)
+            feedback = feedback_trace.to_prompt_text()
             previous_bundle = bundle_result.bundle
 
         if bundle_result is None or exec_result is None:
@@ -250,7 +237,7 @@ class MPPAutoAdapter(dspy.Module):
 
         return Prediction(
             bundle=bundle_result.bundle,
-            final_response=exec_result.final_response,
+            decoded_bundle=exec_result.decoded_bundle,
             executor_reasoning=exec_result.reasoning,
             qa_result=qa_result,
             qa_passed=qa_passed,

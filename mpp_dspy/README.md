@@ -8,6 +8,11 @@ MPP can be treated as a two-stage adapter pipeline:
    (spec + payload).
 2. A derived "Executor" adapter uses that protocol to produce the final output.
 
+Implementation note: in `mpp_dspy`, the executor predictor is intentionally
+**MPP-unaware at the call boundary**. The executor receives a single
+`bundle_text` input (a serialized bundle) so any generic LM can act as the
+Executor without prior knowledge of MPP.
+
 
 ## Default convergence pipeline example
 
@@ -24,7 +29,7 @@ result = program(
     user_goal="Draft a crisp product launch email.",
     open_world=True,
 )
-print(result.final_response)
+print(result.decoded_bundle)
 ```
 
 If you pass a `dspy.ChainOfThought` executor into `MPPAutoAdapter`, the result
@@ -60,7 +65,7 @@ bundle_result = adapter.build_bundle(
     "Write a horror story about a lighthouse keeper in Lovecraftian tone."
 )
 exec_result = adapter.execute(bundle_result.bundle, open_world=True)
-print(exec_result.final_response)
+print(exec_result.decoded_bundle)
 ```
 
 `MPPAdapterPipeline` wraps the refinement loops so this pattern drops cleanly
@@ -106,7 +111,7 @@ optimizer = MPPAutoAdapterOptimizer(
 )
 optimized = optimizer.compile(MPPAutoAdapter(), trainset=case)
 result = optimized(user_goal=case["user_goal"], open_world=True)
-print(result.final_response)
+print(result.decoded_bundle)
 ```
 
 ## Client Interface
@@ -154,8 +159,12 @@ provider of your choice and pass it to `dspy.settings.configure`.
   populated and the loop enforces that reasoning is returned.
 - Closed-world tasks: use stability checks as convergence and run QA once at the
   end.
-- Open-world tasks: set `open_world=True` to run QA-augmented refinement on every
-  iteration and stop on QA pass or max-iteration bounds.
+- Open-world tasks: set `open_world=True` to run QA gating per bundle attempt;
+  QA failures trigger a new bundle (executor runs once per bundle).
+- `executor_max_iters` only affects closed-world stability passes; open-world
+  ignores it because each bundle is executed once.
+- QA predictors must return `verdict`, `issues`, and `repair_examples`; use `[]`
+  when there is nothing to repair.
 - If the executor fails to converge within its cap, MPPAutoAdapter feeds the
   failure signal back into the architect and rebuilds the bundle, resetting the
   executor loop.

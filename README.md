@@ -1,7 +1,7 @@
 # MPP: Meta-Prompting Protocol
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Version](https://img.shields.io/badge/MPP-v1.4.0-blue)](docs/meta_prompting_protocol_spec.md)
+[![Version](https://img.shields.io/badge/MPP-v1.5.0-blue)](docs/meta_prompting_protocol_spec.md)
 [![Website](https://camo.githubusercontent.com/e49e99e37f7d3db64fc81400ce926d621dd38746c68b678a10c54331835832fe/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f50726f6a6563742d576562736974652d677265656e)](https://gabrielbarberini.github.io/meta-prompting-protocol/)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/GabrielBarberini/meta-prompting-protocol)
 
@@ -55,8 +55,7 @@ flowchart LR
   B --> E[Executor]
   E --> QF["Final QA<br>(closed-world)"]
   QF --> R[Final Response]
-  E -. "open_world: QA loop" .-> Q[QA]
-  Q -. feedback .-> E
+  E -. "open_world: QA gate" .-> Q[QA]
   E -. "failure feedback" .-> A
 ```
 
@@ -93,7 +92,7 @@ result = program(
   user_goal="Draft a crisp product launch email.",
   open_world=True,
 )
-print(result.final_response)
+print(result.decoded_bundle)
 ```
 
 To plug in a custom provider, supply any DSPy-compatible LM to
@@ -121,7 +120,7 @@ optimizer = MPPAutoAdapterOptimizer(
 )
 optimized = optimizer.compile(program, trainset=case)
 result = optimized(user_goal="Draft a crisp launch email.", open_world=True)
-print(result.final_response)
+print(result.decoded_bundle)
 ```
 
 If you want parallel candidates, run multiple `MPPAutoAdapterOptimizer` instances
@@ -230,7 +229,7 @@ Derivate an appropriate protocol and build a MPP bundle encoding the following p
 And it would respond with a complete MPP bundle ready for an Executor to process e.g
 ```json
 {
-  "meta_protocol_version": "1.4.0",
+  "meta_protocol_version": "1.5.0",
   "derivative_protocol_specification": {
     "protocol_name": "Constrained Persona Protocol (CPP)",
     "protocol_version": "1.0",

@@ -52,10 +52,19 @@ def _refined_goal(
             f"{json.dumps(previous_bundle, indent=2, ensure_ascii=True)}"
         )
     if error_message:
-        parts.append(f"Refinement feedback:\n{error_message}")
+        parts.append(
+            "Refinement feedback:\n"
+            "<MPP_REFINEMENT_TRACE>\n"
+            f"{error_message}\n"
+            "</MPP_REFINEMENT_TRACE>"
+        )
     parts.append(
-        "Refine for stability and correctness. If the previous bundle is valid and "
-        "addresses the feedback, return it verbatim."
+        "Refine for stability and correctness.\n"
+        "- Use the refinement trace to update the derivative protocol specification "
+        "and/or payload so the next bundle is self-contained and passes QA without "
+        "any external side-channel context.\n"
+        "- If the previous bundle is valid and addresses the feedback, return it "
+        "verbatim."
     )
     return "\n\n".join(parts)
 
