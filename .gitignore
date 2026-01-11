@@ -10,3 +10,7 @@ pytest.xml
 report.xml
 report.json
 report.html
+log.html
+output.xml
+data/benchmarks/
+.env
