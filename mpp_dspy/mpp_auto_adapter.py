@@ -10,7 +10,7 @@ from dspy.teleprompt.teleprompt import Teleprompter
 
 from .dspy_adapters import MPPArchitectAdapter, MPPExecutorAdapter, MPPQAAdapter
 from .feedback import FeedbackEvent, FeedbackTrace
-from .metrics import LongitudinalMetric, TraceCostMetric
+from .metrics import AllPassMetric, LongitudinalMetric
 from .mpp_adapter import ExecutionResult, MPPAdapterPipeline
 from .mpp_optimizer import (
     LongitudinalResult,
@@ -301,6 +301,8 @@ class MPPAutoAdapterOptimizer(Teleprompter):
         template: str,
         mutate_function: MutateFunction,
         longitudinal_iters: int = 2,
+        longitudinal_patience: int | None = None,
+        longitudinal_min_delta: float = 0.0,
         metric: LongitudinalMetric | None = None,
         adapter_kwargs: Mapping[str, object] | None = None,
     ) -> None:
@@ -308,7 +310,9 @@ class MPPAutoAdapterOptimizer(Teleprompter):
         self.template = template
         self.mutate_function = mutate_function
         self.longitudinal_iters = longitudinal_iters
-        self.metric = metric or TraceCostMetric()
+        self.longitudinal_patience = longitudinal_patience
+        self.longitudinal_min_delta = longitudinal_min_delta
+        self.metric = metric or AllPassMetric()
         self.adapter_kwargs = dict(adapter_kwargs or {})
 
     def compile(
@@ -458,6 +462,8 @@ class MPPAutoAdapterOptimizer(Teleprompter):
             mutate_function=self.mutate_function,
             score_function=score_function,
             max_iters=self.longitudinal_iters,
+            patience=self.longitudinal_patience,
+            min_delta=self.longitudinal_min_delta,
         )
         return refiner.refine(self.template, case)
 

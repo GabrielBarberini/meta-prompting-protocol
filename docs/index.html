@@ -113,8 +113,9 @@
                 <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm w-full max-w-3xl text-left">
                     <p class="text-sm font-semibold text-slate-600">Longitudinal refinement</p>
                     <p class="mt-3 text-sm text-slate-600">
-                        The longitudinal loop wraps the vertical pipeline, scoring trace costs and mutating
-                        template blocks to reduce convergence friction over time.
+                        The longitudinal loop wraps the vertical pipeline, requiring all QA checks to pass and
+                        mutating template blocks to improve self-contained bundle success. Use patience and a
+                        minimum delta to stop early when scores stop improving.
                     </p>
                 </div>
                 <div class="bg-white border border-slate-200 rounded-lg p-6 shadow-sm w-full max-w-3xl text-left">
@@ -153,6 +154,8 @@ program = MPPAutoAdapter()
 optimizer = MPPAutoAdapterOptimizer(
     template=template,
     mutate_function=DefaultLongitudinalMutator(lm),
+    longitudinal_patience=1,
+    longitudinal_min_delta=0.0,
 )
 optimized = optimizer.compile(program, trainset=case)
 result = optimized(user_goal="Draft a crisp product launch email.", open_world=True)

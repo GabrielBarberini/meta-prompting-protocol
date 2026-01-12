@@ -1,6 +1,6 @@
 import pytest
 
-from mpp_dspy.metrics import TraceCostMetric
+from mpp_dspy.metrics import AllPassMetric, TraceCostMetric
 from mpp_dspy.mpp_optimizer import LongitudinalTrace
 
 
@@ -15,6 +15,21 @@ def test_trace_cost_metric_scores_zero_on_failure() -> None:
         executor_refinements=0,
     )
     assert metric.score([trace]) == 0.0
+
+
+def test_all_pass_metric_requires_all_success() -> None:
+    metric = AllPassMetric()
+    traces = [
+        LongitudinalTrace(case="a", qa_passed=True),
+        LongitudinalTrace(case="b", qa_passed=True),
+    ]
+    assert metric.score(traces) == 1.0
+
+    traces = [
+        LongitudinalTrace(case="a", qa_passed=True),
+        LongitudinalTrace(case="b", qa_passed=False),
+    ]
+    assert metric.score(traces) == 0.0
 
 
 def test_trace_cost_metric_weights_refinements() -> None:

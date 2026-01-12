@@ -12,8 +12,19 @@ class LongitudinalMetric(Protocol):
         """Return a scalar score where higher is better."""
 
 
+class AllPassMetric:
+    """Default metric: require all traces to pass QA."""
+
+    name = "all_pass"
+
+    def score(self, traces: Sequence[LongitudinalTrace]) -> float:
+        if not traces:
+            return 0.0
+        return 1.0 if all(trace.qa_passed is True for trace in traces) else 0.0
+
+
 class TraceCostMetric:
-    """Default metric: reward success and penalize vertical refinements.
+    """Alternate metric: reward success and penalize vertical refinements.
 
     The final response weight dominates architect refinements, which dominate
     executor refinements to favor fast, stable convergence.

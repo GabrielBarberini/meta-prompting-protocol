@@ -14,7 +14,7 @@ Implementation note: in `mpp_dspy`, the executor predictor is intentionally
 Executor without prior knowledge of MPP.
 
 
-## Default convergence pipeline example
+## Default refinement pipeline example
 
 ```python
 import dspy
@@ -39,7 +39,7 @@ See the repository `README.md` for template optimizer examples and parallel
 candidate guidance.
 
 
-## Custom convergence pipeline example
+## Custom refinement pipeline example
 
 ```python
 import dspy
@@ -108,6 +108,8 @@ case = {"user_goal": "Produce a structured risk checklist.", "open_world": True}
 optimizer = MPPAutoAdapterOptimizer(
     template=template,
     mutate_function=DefaultLongitudinalMutator(lm),
+    longitudinal_patience=1,
+    longitudinal_min_delta=0.0,
 )
 optimized = optimizer.compile(MPPAutoAdapter(), trainset=case)
 result = optimized(user_goal=case["user_goal"], open_world=True)
@@ -127,7 +129,11 @@ provider of your choice and pass it to `dspy.settings.configure`.
 - `MPPAutoAdapterOptimizer` is a DSPy teleprompter: call `compile()` with a base
   `MPPAutoAdapter` and a single case (mapping or object with `user_goal` /
   `open_world`) to get an optimized module. It accepts a `metric` implementing
-  `LongitudinalMetric` so you can replace the default trace-cost scoring.
+  `LongitudinalMetric` so you can replace the default all-pass scoring.
+- `MPPAutoAdapterOptimizer` accepts `longitudinal_patience` and
+  `longitudinal_min_delta` to early-stop the longitudinal loop when the score
+  stops improving. Set `longitudinal_patience=None` to run the full iteration
+  budget.
 - `MPPLongitudinalRefiner` is the generic teleprompter used internally by
   `MPPAutoAdapterOptimizer`. Use it directly when you want a custom
   `score_function` or to optimize non-MPPAutoAdapter templates. The
@@ -138,10 +144,12 @@ provider of your choice and pass it to `dspy.settings.configure`.
   only mutates `strategy_payload`, `architect_primer`, and `executor_primer`.
 - `mcp_tooling` (optional spec field) lets the Architect declare tool schemas
   and call order when the Executor must run MCP tools before responding.
+- `AllPassMetric` (default) returns 1.0 only when all traces pass QA.
 - `TraceCostMetric` uses a dominant final-response weight and doubles weights
   as you move outward (defaults: final=4, architect=2, executor=1). Override
   `final_weight` to scale the set or pass explicit weights. If the
-  bundle/executor fails to stabilize or QA fails, the case score is 0.
+  bundle/executor fails to stabilize or QA fails, the case score is 0. Scores
+  are averaged across traces.
 - Monadic refinement returns per-iteration telemetry in `steps` on
   `BundleResult` and `ExecutionResult` (includes outputs plus QA/errors).
 - For symmetry with template optimization, `MPPVerticalRefiner` wraps the

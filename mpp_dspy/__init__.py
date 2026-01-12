@@ -1,4 +1,4 @@
-from .metrics import LongitudinalMetric, TraceCostMetric
+from .metrics import AllPassMetric, LongitudinalMetric, TraceCostMetric
 from .models import DerivativeProtocolSpecification, MPPBundle
 from .mpp_adapter import (
     BundleResult,
@@ -81,6 +81,7 @@ __all__ = [
     "LongitudinalTrace",
     "MPPLongitudinalRefiner",
     "LongitudinalMetric",
+    "AllPassMetric",
     "TraceCostMetric",
     "DefaultLongitudinalMutator",
 ]

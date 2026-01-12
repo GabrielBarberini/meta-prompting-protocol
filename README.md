@@ -70,8 +70,8 @@ MPP exposes two optimization systems:
   recover missing info or compliance until it converges. This is the default
   behavior of `MPPAutoAdapter`.
 - **Template optimization:** wraps the monadic loop in a TextGrad-style mutation
-  cycle to find a prompt framing that converges faster (fewer retries). This is
-  what `MPPAutoAdapterOptimizer` compiles.
+  cycle to find a prompt framing that maximizes QA pass outcomes (self-contained
+  bundle + QA pass). This is what `MPPAutoAdapterOptimizer` compiles.
 
 #### Quick Start
 
@@ -117,6 +117,8 @@ program = MPPAutoAdapter()
 optimizer = MPPAutoAdapterOptimizer(
   template=YOUR_TEMPLATE,
   mutate_function=DefaultLongitudinalMutator(lm),
+  longitudinal_patience=1,
+  longitudinal_min_delta=0.0,
 )
 optimized = optimizer.compile(program, trainset=case)
 result = optimized(user_goal="Draft a crisp launch email.", open_world=True)
@@ -150,8 +152,8 @@ and the required bundle structure/order stay immutable.
 
 Optimization uses two loops:
 - Template optimization loop (TextGrad or other optimizers) mutates allowed text
-  segments to improve convergence for a case (run multiple cases separately if
-  needed).
+  segments to improve QA pass outcomes for a case (run multiple cases separately
+  if needed).
 - Monadic refinement loop retries per request to stabilize a single
   bundle/execution with validation/QA feedback.
 See `FLOW_OF_INFORMATION.md` for a step-by-step data flow breakdown.
@@ -165,18 +167,23 @@ flowchart LR
   M --> T
 ```
 
-Template-optimization scoring is pluggable via `LongitudinalMetric`, which
-replaces the default trace-cost metric used by `MPPAutoAdapterOptimizer`.
-The default `TraceCostMetric` uses a dominant final-response weight and doubles
-weights as you move outward (defaults: final=4, architect=2, executor=1).
+Template-optimization scoring is pluggable via `LongitudinalMetric`.
+The default `AllPassMetric` returns 1.0 only when all traces pass QA (single-case
+and multi-case runs are effectively AND/0-1). It does not penalize iteration
+counts. If you want to penalize refinements, switch to `TraceCostMetric`, which
+uses a dominant final-response weight and
+doubles weights as you move outward (defaults: final=4, architect=2, executor=1).
 Override `final_weight` to scale the set or pass explicit weights. If the
 bundle/executor fails to stabilize or QA fails, the case score is 0.
+Longitudinal optimization can early-stop after non-improving iterations by
+setting `longitudinal_patience` (count) and `longitudinal_min_delta` (minimum
+score delta). Defaults are `None` and `0.0`.
 
 ##### Customization Interfaces
 Modular pieces you can swap without changing the core flow:
 - `DefaultLongitudinalMutator`: default mutation policy (keeps `entry_prompt`
   fixed; mutates `strategy_payload`, `architect_primer`, `executor_primer`).
-- `LongitudinalMetric`: scoring interface (default `TraceCostMetric`).
+- `LongitudinalMetric`: scoring interface (default `AllPassMetric`).
 - `mutate_function`: mutation hook used by `MPPAutoAdapterOptimizer` and
   `MPPLongitudinalRefiner`.
 - `MPPLongitudinalRefiner`: lower-level teleprompter if you want a custom
@@ -195,15 +202,15 @@ Modular pieces you can swap without changing the core flow:
 You can view MPP as a two-loop system:
 - **Inner (monadic refinement):** guarantees correctness for a single request,
   but can be costly if it needs multiple retries.
-- **Outer (template optimization):** tunes prompts for a case to reduce that
-  inner-loop cost over time.
+- **Outer (template optimization):** tunes prompts for a case to improve QA pass
+  likelihood.
 
-Important: do not score template-optimization updates solely on the final
-answer. If the monadic loop "fixes" errors, the prompt can look perfect while
-still being expensive. Instead, score the trace cost (iteration counts, QA
-failures, validation errors). If a bundle or executor never stabilizes, treat it
-as max loss and move on. The goal is not just convergence, but faster
-convergence.
+Important: if you care about convergence cost, do not score template-optimization
+updates solely on the final answer. If the monadic loop "fixes" errors, the
+prompt can look perfect while still being expensive. Use `TraceCostMetric` (or a
+custom metric) to incorporate iteration counts and QA failures. If a bundle or
+executor never stabilizes, treat it as max loss and move on. The default
+`AllPassMetric` focuses only on QA pass outcomes.
 
 ##### Raw
 Download the [MPP Specification](docs/meta_prompting_protocol_spec.md) and attach it to an AI model session. Frame the AI as a "Protocol Architect" or "Executor" and start generating or executing MPP bundles.

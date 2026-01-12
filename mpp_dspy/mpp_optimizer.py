@@ -259,12 +259,16 @@ class MPPLongitudinalRefiner(Teleprompter):
         *,
         max_iters: int = 5,
         maximize: bool = True,
+        patience: int | None = None,
+        min_delta: float = 0.0,
     ) -> None:
         super().__init__()
         self.mutate_function = mutate_function
         self.score_function = score_function
         self.max_iters = max_iters
         self.maximize = maximize
+        self.patience = patience
+        self.min_delta = min_delta
         self._score_accepts_blocks = self._score_function_accepts_blocks(score_function)
         self._mutate_accepts_traces = self._mutate_function_accepts_traces(
             mutate_function
@@ -298,6 +302,7 @@ class MPPLongitudinalRefiner(Teleprompter):
             LongitudinalStep(iteration=0, template=best_template, score=best_score)
         ]
         best_blocks = dict(current_blocks)
+        no_improve = 0
 
         for i in range(1, self.max_iters + 1):
             proposed_blocks = self._mutate(
@@ -320,12 +325,17 @@ class MPPLongitudinalRefiner(Teleprompter):
                 )
             )
 
-            if self._is_better(candidate_score, best_score):
+            if self._is_improvement(candidate_score, best_score):
                 best_score = candidate_score
                 best_template = candidate_template
                 current_blocks = merged_blocks
                 current_traces = candidate_traces
                 best_blocks = dict(merged_blocks)
+                no_improve = 0
+            else:
+                no_improve += 1
+                if self.patience is not None and no_improve >= self.patience:
+                    break
 
         return LongitudinalResult(
             template=best_template,
@@ -367,6 +377,11 @@ class MPPLongitudinalRefiner(Teleprompter):
 
     def _is_better(self, candidate: float, best: float) -> bool:
         return candidate > best if self.maximize else candidate < best
+
+    def _is_improvement(self, candidate: float, best: float) -> bool:
+        if self.maximize:
+            return candidate >= best + self.min_delta
+        return candidate <= best - self.min_delta
 
     @staticmethod
     def _score_function_accepts_blocks(score_function: ScoreFunction) -> bool:
