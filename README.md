@@ -62,7 +62,7 @@ flowchart LR
 #### Example Workflow
 1.  **User Input:** "Write a horror story about a lighthouse keeper."
 2.  **Protocol Architect (MPP aware):** Derivates a MPP compliant protocol on the fly with tags like `$genre` and `$plot_points`. Then encodes the user's request accordingly and bundles it with the generated protocol spec.
-3.  **Executor (MPP aware):** Receives the bundle, learns the new protocol, and generates a horror story based on the structured payload.
+3.  **Executor:** Receives the bundle, learns the new protocol, and generates a horror story based on the structured payload.
 
 #### Optimization Overview
 MPP exposes two optimization systems:
